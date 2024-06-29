@@ -1,0 +1,28 @@
+name: telegram message on commit
+
+on:
+  push:
+    branches: [ "dev" ]
+  pull_request:
+    branches: [ "dev" ]
+
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: send telegram message on push
+        uses: appleboy/telegram-action@master
+        with:
+          to: ${{ secrets.TELEGRAM_CHAT_ID }}
+          token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          format: markdown
+          message: |
+            🎨 **New Frontend Commit!** 
+            
+            👤 **Author**: ${{ github.actor }}  
+            📝 **Commit Message**: ${{ github.event.commits[0].message }}
+            
+            📦 **Repository**: [${{ github.repository }}](https://github.com/${{ github.repository }})  
+            🔗 **See Changes**: [View Commit](https://github.com/${{ github.repository }}/commit/${{github.sha}})  

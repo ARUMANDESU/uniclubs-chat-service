@@ -1,0 +1,43 @@
+version: "3"
+
+tasks:
+  run:local:
+    aliases:
+      - r:l
+    cmd: go run cmd/main.go --config=./config/local.yaml
+
+  run:dev:
+    aliases:
+      - r:d
+    cmd: go run cmd/main.go --config=./config/dev.yaml
+
+  run:environment:
+    aliases:
+      - r:e
+    cmd: go run cmd/main.go
+
+  run:test:
+    aliases:
+      - r:t
+    cmd: go run cmd/main.go --env=.env.test
+
+  test:coverage:
+    aliases:
+      - t:c
+    cmd: gotest -short -coverprofile=./tests/c.out ./... && go tool cover -html="./tests/c.out"
+
+  test:unit:
+    aliases:
+      - t:u
+    cmd: gotest -v -short ./...
+
+  test:unit:race:
+    aliases:
+      - t:ur
+    cmd: gotest -v -race -short ./...
+
+
+  test:integration:
+    aliases:
+      - t:i
+    cmd: gotest -v ./tests/...
