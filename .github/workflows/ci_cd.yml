@@ -19,7 +19,7 @@ jobs:
           token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           format: markdown
           message: |
-            🎨 **New Frontend Commit!** 
+            🎨 **New Backend Commit!** 
             
             👤 **Author**: ${{ github.actor }}  
             📝 **Commit Message**: ${{ github.event.commits[0].message }}

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"github.com/ARUMANDESU/uniclubs-comments-service/internal/app/httpapp"
 	"github.com/ARUMANDESU/uniclubs-comments-service/internal/config"
+	"github.com/ARUMANDESU/uniclubs-comments-service/internal/ws"
 	"log/slog"
 	"net/http"
 )
@@ -16,7 +17,13 @@ type App struct {
 }
 
 func New(cfg config.Config, logger *slog.Logger) *App {
-	httpServer := httpapp.New(cfg, nil)
+	mux := http.NewServeMux()
+
+	manager := ws.NewManager()
+
+	mux.HandleFunc("/ws", manager.ServeWS)
+
+	httpServer := httpapp.New(cfg, mux)
 
 	return &App{
 		log:     logger,

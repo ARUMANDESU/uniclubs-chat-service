@@ -33,7 +33,7 @@ func New(cfg config.Config, handler http.Handler) Server {
 	httpServer := &http.Server{
 		Addr:           cfg.HTTP.Address,
 		Handler:        handler,
-		MaxHeaderBytes: 640 << 20, // 640 MB
+		MaxHeaderBytes: 1 << 20, // 1 MB
 		ReadTimeout:    cfg.HTTP.Timeout,
 		WriteTimeout:   cfg.HTTP.Timeout,
 		IdleTimeout:    cfg.HTTP.IdleTimeout,
