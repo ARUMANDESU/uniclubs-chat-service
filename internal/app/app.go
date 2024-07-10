@@ -5,7 +5,9 @@ import (
 	"errors"
 	"github.com/ARUMANDESU/uniclubs-comments-service/internal/app/httpapp"
 	"github.com/ARUMANDESU/uniclubs-comments-service/internal/config"
+	"github.com/ARUMANDESU/uniclubs-comments-service/internal/handlers"
 	"github.com/ARUMANDESU/uniclubs-comments-service/internal/ws"
+	"github.com/ARUMANDESU/uniclubs-comments-service/pkg/logger"
 	"log/slog"
 	"net/http"
 )
@@ -16,17 +18,21 @@ type App struct {
 	HTTPSvr httpapp.Server
 }
 
-func New(cfg config.Config, logger *slog.Logger) *App {
-	mux := http.NewServeMux()
+func New(cfg config.Config, log *slog.Logger) *App {
 
-	manager := ws.NewManager()
+	wsManager, err := ws.NewManager(log)
+	if err != nil {
+		log.Error("failed to create websocket manager", logger.Err(err))
+		panic(err)
+	}
 
-	mux.HandleFunc("/ws", manager.ServeWS)
+	handler := handlers.NewHandler(log, wsManager)
+	handler.RegisterRoutes()
 
-	httpServer := httpapp.New(cfg, mux)
+	httpServer := httpapp.New(cfg, handler.Mux)
 
 	return &App{
-		log:     logger,
+		log:     log,
 		cfg:     cfg,
 		HTTPSvr: httpServer,
 	}

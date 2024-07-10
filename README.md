@@ -87,7 +87,7 @@ This is a simple comments service for [AITU UCMS][aitu-ucms-url] project. It is 
 * [![Docker][docker-shield]][docker-url]
 * [![Docker Compose][docker-compose-shield]][docker-compose-url]
 * [![RabbitMQ][rabbitmq-shield]][rabbitmq-url]
-* [![Websockets][websockets-shield]][websockets-url]
+* [![Centrifuge][centrifuge-shield]][centrifuge-url]
 
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
@@ -173,6 +173,7 @@ This is a simple comments service for [AITU UCMS][aitu-ucms-url] project. It is 
 [docker-compose-url]: https://docs.docker.com/compose/
 [rabbitmq-url]: https://www.rabbitmq.com/
 [websockets-url]: https://developer.mozilla.org/en-US/docs/Web/API/WebSockets_API
+[centrifuge-url]: https://github.com/centrifugal/centrifuge
 
 [go-shield]: https://img.shields.io/badge/Go-00ADD8?style=for-the-badge&logo=go&logoColor=white
 [mongodb-shield]: https://img.shields.io/badge/MongoDB-47A248?style=for-the-badge&logo=mongodb&logoColor=white
@@ -180,3 +181,4 @@ This is a simple comments service for [AITU UCMS][aitu-ucms-url] project. It is 
 [docker-compose-shield]: https://img.shields.io/badge/Docker_Compose-2496ED?style=for-the-badge&logo=docker&logoColor=white
 [rabbitmq-shield]: https://img.shields.io/badge/RabbitMQ-FF6600?style=for-the-badge&logo=rabbitmq&logoColor=white
 [websockets-shield]: https://img.shields.io/badge/Websockets-777777?style=for-the-badge&logo=websocket&logoColor=white
+[centrifuge-shield]: https://img.shields.io/badge/Centrifuge-FF6600?style=for-the-badge&logo=centrifuge&logoColor=white

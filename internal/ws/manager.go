@@ -1,123 +1,226 @@
 package ws
 
 import (
+	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/gorilla/websocket"
+	"github.com/ARUMANDESU/uniclubs-comments-service/pkg/logger"
+	"github.com/centrifugal/centrifuge"
 	"log"
+	"log/slog"
 	"net/http"
 	"sync"
+	"time"
 )
 
 var (
 	ErrEventNotSupported = errors.New("this event type is not supported")
 )
 
-// checkOrigin will check origin and return true if its allowed
-func checkOrigin(r *http.Request) bool {
+const exampleChannel = "chat:index"
 
-	// Grab the request origin
-	origin := r.Header.Get("Origin")
-
-	switch origin {
-	case "http://localhost:9090":
-		return true
-	default:
-		return false
-	}
-}
-
-var upgrader = websocket.Upgrader{
-	//CheckOrigin:     checkOrigin,
-	ReadBufferSize:  1024,
-	WriteBufferSize: 1024,
+// Check whether channel is allowed for subscribing. In real case permission
+// check will probably be more complex than in this example.
+func channelSubscribeAllowed(channel string) bool {
+	return channel == exampleChannel
 }
 
 type Manager struct {
-	posts PostList
 	sync.RWMutex
-	handlers map[string]EventHandler
+
+	log      *slog.Logger
+	node     *centrifuge.Node
+	handlers map[EventType]EventHandler
 }
 
-func NewManager() *Manager {
-	m := &Manager{
-		posts:    make(PostList),
-		handlers: make(map[string]EventHandler),
+func NewManager(log *slog.Logger) (*Manager, error) {
+	node, err := centrifuge.New(centrifuge.Config{})
+	if err != nil {
+		return nil, err
 	}
+
+	m := &Manager{
+		log:      log,
+		node:     node,
+		handlers: make(map[EventType]EventHandler),
+	}
+
 	m.setupEventHandlers()
-	return m
+	m.setupNode()
+
+	return m, nil
+}
+
+// setupNode configures Centrifuge Node to handle all necessary events.
+func (m *Manager) setupNode() {
+	m.node.OnConnecting(func(ctx context.Context, e centrifuge.ConnectEvent) (centrifuge.ConnectReply, error) {
+		cred, _ := centrifuge.GetCredentials(ctx)
+		return centrifuge.ConnectReply{
+			Data: []byte(`{}`),
+			// Subscribe to a personal server-side channel.
+			Subscriptions: map[string]centrifuge.SubscribeOptions{
+				"#" + cred.UserID: {
+					EnableRecovery: true,
+					EmitPresence:   true,
+					EmitJoinLeave:  true,
+					PushJoinLeave:  true,
+				},
+			},
+		}, nil
+	})
+
+	m.node.OnConnect(func(client *centrifuge.Client) {
+		transport := client.Transport()
+		log.Printf("[user %s] connected via %s with protocol: %s", client.UserID(), transport.Name(), transport.Protocol())
+
+		client.OnRefresh(func(e centrifuge.RefreshEvent, cb centrifuge.RefreshCallback) {
+			log.Printf("[user %s] connection is going to expire, refreshing", client.UserID())
+
+			cb(centrifuge.RefreshReply{
+				ExpireAt: time.Now().Unix() + 60,
+			}, nil)
+		})
+
+		client.OnSubscribe(func(e centrifuge.SubscribeEvent, cb centrifuge.SubscribeCallback) {
+			log.Printf("[user %s] subscribes on %s", client.UserID(), e.Channel)
+
+			if !channelSubscribeAllowed(e.Channel) {
+				cb(centrifuge.SubscribeReply{}, centrifuge.ErrorPermissionDenied)
+				return
+			}
+
+			cb(centrifuge.SubscribeReply{
+				Options: centrifuge.SubscribeOptions{
+					EnableRecovery: true,
+					EmitPresence:   true,
+					EmitJoinLeave:  true,
+					PushJoinLeave:  true,
+					Data:           []byte(`{"msg": "welcome"}`),
+				},
+			}, nil)
+		})
+
+		client.OnPublish(func(e centrifuge.PublishEvent, cb centrifuge.PublishCallback) {
+			log.Printf("[user %s] publishes into channel %s: %s", client.UserID(), e.Channel, string(e.Data))
+
+			if !client.IsSubscribed(e.Channel) {
+				cb(centrifuge.PublishReply{}, centrifuge.ErrorPermissionDenied)
+				return
+			}
+
+			var msg Event
+			err := json.Unmarshal(e.Data, &msg)
+			if err != nil {
+				cb(centrifuge.PublishReply{}, centrifuge.ErrorBadRequest)
+				return
+			}
+
+			m.log.Info("received message", slog.AnyValue(msg))
+
+			publishReply, err := m.routeEvent(clientMessage{
+				Event:        msg,
+				Client:       client,
+				PublishEvent: e,
+			})
+			if err != nil {
+				switch {
+				case errors.Is(err, ErrEventNotSupported):
+					cb(centrifuge.PublishReply{}, centrifuge.ErrorMethodNotFound)
+				default:
+					cb(centrifuge.PublishReply{}, centrifuge.ErrorInternal)
+				}
+				return
+			}
+
+			cb(publishReply, err)
+		})
+
+		client.OnMessage(func(e centrifuge.MessageEvent) {
+			log.Printf("[user %s] message received: %s", client.UserID(), string(e.Data))
+		})
+
+		client.OnRPC(func(e centrifuge.RPCEvent, cb centrifuge.RPCCallback) {
+			log.Printf("[user %s] sent RPC, data: %s, method: %s", client.UserID(), string(e.Data), e.Method)
+			switch e.Method {
+			case "getCurrentYear":
+				cb(centrifuge.RPCReply{Data: []byte(`{"year": "2020"}`)}, nil)
+			default:
+				cb(centrifuge.RPCReply{}, centrifuge.ErrorMethodNotFound)
+			}
+		})
+
+		client.OnPresence(func(e centrifuge.PresenceEvent, cb centrifuge.PresenceCallback) {
+			log.Printf("[user %s] calls presence on %s", client.UserID(), e.Channel)
+
+			if !client.IsSubscribed(e.Channel) {
+				cb(centrifuge.PresenceReply{}, centrifuge.ErrorPermissionDenied)
+				return
+			}
+			cb(centrifuge.PresenceReply{}, nil)
+		})
+
+		client.OnUnsubscribe(func(e centrifuge.UnsubscribeEvent) {
+			log.Printf("[user %s] unsubscribed from %s: %s", client.UserID(), e.Channel, e.Reason)
+		})
+
+		client.OnAlive(func() {
+			log.Printf("[user %s] connection is still active", client.UserID())
+		})
+
+		client.OnDisconnect(func(e centrifuge.DisconnectEvent) {
+			log.Printf("[user %s] disconnected: %s", client.UserID(), e.Reason)
+		})
+	})
+
+	if err := m.node.Run(); err != nil {
+		log.Fatal(err)
+	}
 }
 
 // setupEventHandlers configures and adds all handlers
 func (m *Manager) setupEventHandlers() {
-	m.handlers[EventCreateComment] = func(e Event, c *Client) error {
-		fmt.Println(e)
-		return nil
+	m.handlers[EventCreateComment] = func(msg clientMessage) (centrifuge.PublishReply, error) {
+		msg.Event.Timestamp = time.Now().Unix()
+		data, _ := json.Marshal(msg.Event)
+
+		result, err := m.node.Publish(
+			msg.PublishEvent.Channel, data,
+			centrifuge.WithHistory(300, time.Minute),
+			centrifuge.WithClientInfo(msg.PublishEvent.ClientInfo),
+		)
+		if err != nil {
+			return centrifuge.PublishReply{}, fmt.Errorf("error publishing message: %w", err)
+		}
+
+		return centrifuge.PublishReply{Result: &result}, nil
 	}
 }
 
 // routeEvent is used to make sure the correct event goes into the correct handler
-func (m *Manager) routeEvent(event Event, c *Client) error {
-	// Check if Handler is present in Map
-	if handler, ok := m.handlers[event.Type]; ok {
-		// Execute the handler and return any err
-		if err := handler(event, c); err != nil {
-			return err
-		}
-		return nil
-	} else {
-		return ErrEventNotSupported
-	}
-}
+func (m *Manager) routeEvent(msg clientMessage) (centrifuge.PublishReply, error) {
+	log := m.log.With(slog.String("event", string(msg.Event.Type)))
 
-func (m *Manager) ServeWS(w http.ResponseWriter, r *http.Request) {
-	log.Println("new ws connection")
-
-	postID := r.URL.Query().Get("post_id")
-	if postID == "" {
-		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte("query parameter 'post_id' cannot be empty"))
-		return
-	}
-
-	// upgrade regular http connection into ws
-	conn, err := upgrader.Upgrade(w, r, nil)
-	if err != nil {
-		log.Printf("error occurred while upgrading connection into ws: %s", err)
-		return
-	}
-
-	client := NewClient(conn, m, postID)
-
-	m.AddClient(postID, client)
-
-	go client.ReadMessages()
-	go client.writeMessages()
-}
-
-func (m *Manager) AddClient(postId string, c *Client) {
-	m.Lock()
-	defer m.Unlock()
-
-	if post, ok := m.posts[postId]; ok {
-		post[c] = true
-	} else {
-		m.posts[postId] = make(ClientList)
-		m.posts[postId][c] = true
-	}
-}
-
-func (m *Manager) RemoveClient(c *Client) {
-	m.Lock()
-	defer m.Unlock()
-
-	if _, ok := m.posts[c.PostID][c]; ok {
-		err := c.connection.Close()
+	if handler, ok := m.handlers[msg.Event.Type]; ok {
+		reply, err := handler(msg)
 		if err != nil {
-			log.Printf("error occurred while closing ws connection: %s", err)
-			return
+			log.Error("error handling event", logger.Err(err))
+			return centrifuge.PublishReply{}, fmt.Errorf("error handling event: %w", err)
 		}
-
-		delete(m.posts[c.PostID], c)
+		return reply, nil
+	} else {
+		return centrifuge.PublishReply{}, ErrEventNotSupported
 	}
+}
+
+func (m *Manager) WebsocketHandler() http.Handler {
+	return centrifuge.NewWebsocketHandler(m.node, centrifuge.WebsocketConfig{
+		CheckOrigin: func(r *http.Request) bool {
+			originHeader := r.Header.Get("Origin")
+			log.Printf("origin header: %s", originHeader)
+			if originHeader == "" || originHeader == "null" {
+				return true
+			}
+			return originHeader == "http://localhost:3000"
+		}})
 }
