@@ -5,12 +5,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/ARUMANDESU/uniclubs-comments-service/internal/domain"
 	"github.com/ARUMANDESU/uniclubs-comments-service/pkg/logger"
 	"github.com/centrifugal/centrifuge"
-	"log"
 	"log/slog"
 	"net/http"
-	"sync"
 	"time"
 )
 
@@ -18,23 +17,21 @@ var (
 	ErrEventNotSupported = errors.New("this event type is not supported")
 )
 
-const exampleChannel = "chat:index"
-
-// Check whether channel is allowed for subscribing. In real case permission
-// check will probably be more complex than in this example.
-func channelSubscribeAllowed(channel string) bool {
-	return channel == exampleChannel
-}
-
 type Manager struct {
-	sync.RWMutex
-
 	log      *slog.Logger
 	node     *centrifuge.Node
 	handlers map[EventType]EventHandler
+
+	commentService CommentService
 }
 
-func NewManager(log *slog.Logger) (*Manager, error) {
+type CommentService interface {
+	CreateComment(ctx context.Context, comment domain.Comment) (domain.Comment, error)
+	UpdateComment(ctx context.Context, comment domain.Comment) (domain.Comment, error)
+	DeleteComment(ctx context.Context, commentID string) error
+}
+
+func NewManager(log *slog.Logger, commentService CommentService) (*Manager, error) {
 	node, err := centrifuge.New(centrifuge.Config{})
 	if err != nil {
 		return nil, err
@@ -44,16 +41,22 @@ func NewManager(log *slog.Logger) (*Manager, error) {
 		log:      log,
 		node:     node,
 		handlers: make(map[EventType]EventHandler),
+
+		commentService: commentService,
 	}
 
 	m.setupEventHandlers()
-	m.setupNode()
+
+	err = m.setupNode()
+	if err != nil {
+		return nil, err
+	}
 
 	return m, nil
 }
 
 // setupNode configures Centrifuge Node to handle all necessary events.
-func (m *Manager) setupNode() {
+func (m *Manager) setupNode() error {
 	m.node.OnConnecting(func(ctx context.Context, e centrifuge.ConnectEvent) (centrifuge.ConnectReply, error) {
 		cred, _ := centrifuge.GetCredentials(ctx)
 		return centrifuge.ConnectReply{
@@ -71,24 +74,14 @@ func (m *Manager) setupNode() {
 	})
 
 	m.node.OnConnect(func(client *centrifuge.Client) {
-		transport := client.Transport()
-		log.Printf("[user %s] connected via %s with protocol: %s", client.UserID(), transport.Name(), transport.Protocol())
-
 		client.OnRefresh(func(e centrifuge.RefreshEvent, cb centrifuge.RefreshCallback) {
-			log.Printf("[user %s] connection is going to expire, refreshing", client.UserID())
-
 			cb(centrifuge.RefreshReply{
 				ExpireAt: time.Now().Unix() + 60,
 			}, nil)
 		})
 
 		client.OnSubscribe(func(e centrifuge.SubscribeEvent, cb centrifuge.SubscribeCallback) {
-			log.Printf("[user %s] subscribes on %s", client.UserID(), e.Channel)
-
-			if !channelSubscribeAllowed(e.Channel) {
-				cb(centrifuge.SubscribeReply{}, centrifuge.ErrorPermissionDenied)
-				return
-			}
+			m.log.Debug("subscribe event", slog.String("channel", e.Channel), slog.String("user_id", client.UserID()))
 
 			cb(centrifuge.SubscribeReply{
 				Options: centrifuge.SubscribeOptions{
@@ -102,7 +95,12 @@ func (m *Manager) setupNode() {
 		})
 
 		client.OnPublish(func(e centrifuge.PublishEvent, cb centrifuge.PublishCallback) {
-			log.Printf("[user %s] publishes into channel %s: %s", client.UserID(), e.Channel, string(e.Data))
+			m.log.Debug(
+				"publish event",
+				slog.String("channel", e.Channel),
+				slog.String("user_id", client.UserID()),
+				slog.String("data", string(e.Data)),
+			)
 
 			if !client.IsSubscribed(e.Channel) {
 				cb(centrifuge.PublishReply{}, centrifuge.ErrorPermissionDenied)
@@ -136,23 +134,7 @@ func (m *Manager) setupNode() {
 			cb(publishReply, err)
 		})
 
-		client.OnMessage(func(e centrifuge.MessageEvent) {
-			log.Printf("[user %s] message received: %s", client.UserID(), string(e.Data))
-		})
-
-		client.OnRPC(func(e centrifuge.RPCEvent, cb centrifuge.RPCCallback) {
-			log.Printf("[user %s] sent RPC, data: %s, method: %s", client.UserID(), string(e.Data), e.Method)
-			switch e.Method {
-			case "getCurrentYear":
-				cb(centrifuge.RPCReply{Data: []byte(`{"year": "2020"}`)}, nil)
-			default:
-				cb(centrifuge.RPCReply{}, centrifuge.ErrorMethodNotFound)
-			}
-		})
-
 		client.OnPresence(func(e centrifuge.PresenceEvent, cb centrifuge.PresenceCallback) {
-			log.Printf("[user %s] calls presence on %s", client.UserID(), e.Channel)
-
 			if !client.IsSubscribed(e.Channel) {
 				cb(centrifuge.PresenceReply{}, centrifuge.ErrorPermissionDenied)
 				return
@@ -161,43 +143,34 @@ func (m *Manager) setupNode() {
 		})
 
 		client.OnUnsubscribe(func(e centrifuge.UnsubscribeEvent) {
-			log.Printf("[user %s] unsubscribed from %s: %s", client.UserID(), e.Channel, e.Reason)
+			m.log.Debug("unsubscribe event", slog.String("channel", e.Channel), slog.String("user_id", client.UserID()))
 		})
 
 		client.OnAlive(func() {
-			log.Printf("[user %s] connection is still active", client.UserID())
+			m.log.Debug("alive event", slog.String("user_id", client.UserID()))
 		})
 
 		client.OnDisconnect(func(e centrifuge.DisconnectEvent) {
-			log.Printf("[user %s] disconnected: %s", client.UserID(), e.Reason)
+			m.log.Debug("disconnect event", slog.String("user_id", client.UserID()))
 		})
 	})
 
 	if err := m.node.Run(); err != nil {
-		log.Fatal(err)
+		return err
 	}
+
+	return nil
 }
 
 // setupEventHandlers configures and adds all handlers
 func (m *Manager) setupEventHandlers() {
-	m.handlers[EventCreateComment] = func(msg clientMessage) (centrifuge.PublishReply, error) {
-		msg.Event.Timestamp = time.Now().Unix()
-		data, _ := json.Marshal(msg.Event)
-
-		result, err := m.node.Publish(
-			msg.PublishEvent.Channel, data,
-			centrifuge.WithHistory(300, time.Minute),
-			centrifuge.WithClientInfo(msg.PublishEvent.ClientInfo),
-		)
-		if err != nil {
-			return centrifuge.PublishReply{}, fmt.Errorf("error publishing message: %w", err)
-		}
-
-		return centrifuge.PublishReply{Result: &result}, nil
-	}
+	m.handlers[EventCreateComment] = m.handleCreateComment
 }
 
-// routeEvent is used to make sure the correct event goes into the correct handler
+// routeEvent routes the event to the correct handler
+//
+// It will return the reply from the handler
+// If the event is not supported, it will return an error
 func (m *Manager) routeEvent(msg clientMessage) (centrifuge.PublishReply, error) {
 	log := m.log.With(slog.String("event", string(msg.Event.Type)))
 
@@ -213,11 +186,11 @@ func (m *Manager) routeEvent(msg clientMessage) (centrifuge.PublishReply, error)
 	}
 }
 
+// WebsocketHandler returns a http.Handler that can be used to upgrade HTTP
 func (m *Manager) WebsocketHandler() http.Handler {
 	return centrifuge.NewWebsocketHandler(m.node, centrifuge.WebsocketConfig{
 		CheckOrigin: func(r *http.Request) bool {
 			originHeader := r.Header.Get("Origin")
-			log.Printf("origin header: %s", originHeader)
 			if originHeader == "" || originHeader == "null" {
 				return true
 			}

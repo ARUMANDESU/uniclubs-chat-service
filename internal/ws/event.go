@@ -5,7 +5,7 @@ import (
 	"github.com/centrifugal/centrifuge"
 )
 
-// clientMessage is a struct that holds the message and the client that sent it
+// clientMessage is a struct that contains the event and the client that triggered the event
 type clientMessage struct {
 	Event        Event
 	Client       *centrifuge.Client
@@ -17,16 +17,18 @@ type EventHandler func(message clientMessage) (centrifuge.PublishReply, error)
 
 type EventType string
 
-// Client events
+// Client events which receive from the client
 const (
-	// EventCreateComment is event name for new comment request
 	EventCreateComment EventType = "create_comment"
+	EventUpdateComment EventType = "update_comment"
+	EventDeleteComment EventType = "delete_comment"
 )
 
-// Server events
+// Server events which are sent to the client
 const (
-	// EventNewComment is event name for new comment creation
-	EventNewComment EventType = "new_comment"
+	EventNewComment    EventType = "new_comment"
+	EventEditComment   EventType = "edit_comment"
+	EventRemoveComment EventType = "remove_comment"
 )
 
 // Event is the Messages sent over the websocket

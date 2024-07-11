@@ -20,7 +20,8 @@ type App struct {
 
 func New(cfg config.Config, log *slog.Logger) *App {
 
-	wsManager, err := ws.NewManager(log)
+	// todo: create a new comment service and pass it to the ws manager
+	wsManager, err := ws.NewManager(log, nil)
 	if err != nil {
 		log.Error("failed to create websocket manager", logger.Err(err))
 		panic(err)
