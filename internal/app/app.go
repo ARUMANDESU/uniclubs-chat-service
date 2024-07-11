@@ -6,6 +6,7 @@ import (
 	"github.com/ARUMANDESU/uniclubs-comments-service/internal/app/httpapp"
 	"github.com/ARUMANDESU/uniclubs-comments-service/internal/config"
 	"github.com/ARUMANDESU/uniclubs-comments-service/internal/handlers"
+	"github.com/ARUMANDESU/uniclubs-comments-service/internal/services/commentservice"
 	"github.com/ARUMANDESU/uniclubs-comments-service/internal/ws"
 	"github.com/ARUMANDESU/uniclubs-comments-service/pkg/logger"
 	"log/slog"
@@ -19,9 +20,15 @@ type App struct {
 }
 
 func New(cfg config.Config, log *slog.Logger) *App {
+	commentService := commentservice.NewComment(commentservice.Config{
+		Logger:   log,
+		Provider: nil,
+		Creator:  nil,
+		Updater:  nil,
+		Deleter:  nil,
+	})
 
-	// todo: create a new comment service and pass it to the ws manager
-	wsManager, err := ws.NewManager(log, nil)
+	wsManager, err := ws.NewManager(log, commentService)
 	if err != nil {
 		log.Error("failed to create websocket manager", logger.Err(err))
 		panic(err)

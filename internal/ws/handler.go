@@ -4,21 +4,21 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/ARUMANDESU/uniclubs-comments-service/internal/domain"
+	"github.com/ARUMANDESU/uniclubs-comments-service/internal/services/commentservice"
 	"github.com/centrifugal/centrifuge"
 	"time"
 )
 
 // handleCreateComment is an event handler that is triggered when a client sends a create_comment event
 func (m *Manager) handleCreateComment(message clientMessage) (centrifuge.PublishReply, error) {
-	var comment domain.Comment
-	err := json.Unmarshal(message.Event.Payload, &comment)
+	var dto commentservice.CreateCommentDTO
+	/*err := json.Unmarshal(message.Event.Payload, &dto)
 	if err != nil {
 		return centrifuge.PublishReply{}, err
-	}
+	}*/
 
 	// Create the comment
-	createdComment, err := m.commentService.CreateComment(context.TODO(), comment)
+	createdComment, err := m.commentService.CreateComment(context.TODO(), dto)
 	if err != nil {
 		return centrifuge.PublishReply{}, err
 	}

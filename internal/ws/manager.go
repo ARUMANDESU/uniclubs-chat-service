@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/ARUMANDESU/uniclubs-comments-service/internal/domain"
+	"github.com/ARUMANDESU/uniclubs-comments-service/internal/services/commentservice"
 	"github.com/ARUMANDESU/uniclubs-comments-service/pkg/logger"
 	"github.com/centrifugal/centrifuge"
 	"log/slog"
@@ -26,7 +27,7 @@ type Manager struct {
 }
 
 type CommentService interface {
-	CreateComment(ctx context.Context, comment domain.Comment) (domain.Comment, error)
+	CreateComment(ctx context.Context, comment commentservice.CreateCommentDTO) (domain.Comment, error)
 	UpdateComment(ctx context.Context, comment domain.Comment) (domain.Comment, error)
 	DeleteComment(ctx context.Context, commentID string) error
 }
