@@ -18,7 +18,7 @@ func (m *Manager) handleCreateComment(message clientMessage) (centrifuge.Publish
 	}*/
 
 	// Create the comment
-	createdComment, err := m.commentService.CreateComment(context.TODO(), dto)
+	createdComment, err := m.commentService.Create(context.TODO(), dto)
 	if err != nil {
 		return centrifuge.PublishReply{}, err
 	}

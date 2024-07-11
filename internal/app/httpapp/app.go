@@ -2,6 +2,7 @@ package httpapp
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/ARUMANDESU/uniclubs-comments-service/internal/config"
 	"net/http"
@@ -42,32 +43,32 @@ func New(cfg config.Config, handler http.Handler) Server {
 	return Server{HTTPServer: httpServer}
 }
 
-// MustRun starts the HTTP server and panics if an error occurs.
-// This method is a convenience wrapper around the Run method,
+// MustStart starts the HTTP server and panics if an error occurs.
+// This method is a convenience wrapper around the Start method,
 // ensuring that if the server fails to start, the application will
 // terminate immediately with a panic.
 //
 // Usage:
 //
-//	MustRun should only be used if you want the application to exit
+//	MustStart should only be used if you want the application to exit
 //	in case the server fails to start. For more controlled error handling,
-//	consider using the Run method directly.
-func (s Server) MustRun() {
-	err := s.Run()
+//	consider using the Start method directly.
+func (s Server) MustStart() {
+	err := s.Start(context.Background())
 	if err != nil {
 		panic(err)
 	}
 }
 
-// Run starts http server.
+// Start starts http server.
 //
 // Returns:
 //   - An error if the starting process encounters any issues; otherwise, nil.
-func (s Server) Run() error {
-	const op = "app.Run"
+func (s Server) Start(_ context.Context) error {
+	const op = "app.http.start"
 
 	err := s.HTTPServer.ListenAndServe()
-	if err != nil {
+	if err != nil && !errors.Is(err, http.ErrServerClosed) {
 		return fmt.Errorf("%s: %w", op, err)
 	}
 
@@ -86,8 +87,9 @@ func (s Server) Run() error {
 // Returns:
 //   - An error if the shutdown process encounters any issues; otherwise, nil.
 func (s Server) Stop(ctx context.Context) error {
-	const op = "app.Stop"
+	const op = "app.http.stop"
 	err := s.HTTPServer.Shutdown(ctx)
+
 	if err != nil {
 		return fmt.Errorf("%s: %w", op, err)
 	}

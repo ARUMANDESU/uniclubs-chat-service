@@ -1,7 +1,6 @@
 package main
 
 import (
-	"errors"
 	"flag"
 	"fmt"
 	"github.com/ARUMANDESU/uniclubs-comments-service/internal/app"
@@ -9,7 +8,6 @@ import (
 	"github.com/ARUMANDESU/uniclubs-comments-service/pkg/logger"
 	"github.com/joho/godotenv"
 	"log/slog"
-	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
@@ -36,24 +34,16 @@ func main() {
 
 	application := app.New(*cfg, log)
 
-	go func() {
-		if err := application.HTTPSvr.Run(); !errors.Is(err, http.ErrServerClosed) {
-			log.Error("HTTP server error: %v", slog.Attr{
-				Key:   "error",
-				Value: slog.StringValue(err.Error()),
-			})
-		}
-		log.Info("stopped serving new connections")
-
-	}()
+	application.Start()
 
 	log.Info("application started")
+
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, syscall.SIGTERM, syscall.SIGINT)
 
 	sign := <-stop
-	defer log.Info("application stopped", slog.String("signal", sign.String()))
 	log.Info("stopping application", slog.String("signal", sign.String()))
+	defer log.Info("application stopped", slog.String("signal", sign.String()))
 
 	application.Stop()
 }

@@ -12,9 +12,9 @@ type Config struct {
 	Env             string        `yaml:"env" env:"ENV" env-default:"local"`
 	HTTP            HTTP          `yaml:"http"`
 	ShutdownTimeout time.Duration `yaml:"shutdown_timeout" env:"SHUTDOWN_TIMEOUT" env-default:"10s"`
-	/*GRPC     GRPC     `yaml:"grpc"`
-	Rabbitmq Rabbitmq `yaml:"rabbitmq"`
-	MongoDB  MongoDB  `yaml:"mongodb"`*/
+	MongoDB         MongoDB       `yaml:"mongodb"`
+	//GRPC     GRPC     `yaml:"grpc"`
+	//Rabbitmq Rabbitmq `yaml:"rabbitmq"`
 }
 
 type HTTP struct {

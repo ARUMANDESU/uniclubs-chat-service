@@ -27,9 +27,9 @@ type Manager struct {
 }
 
 type CommentService interface {
-	CreateComment(ctx context.Context, comment commentservice.CreateCommentDTO) (domain.Comment, error)
-	UpdateComment(ctx context.Context, comment domain.Comment) (domain.Comment, error)
-	DeleteComment(ctx context.Context, commentID string) error
+	Create(ctx context.Context, comment commentservice.CreateCommentDTO) (domain.Comment, error)
+	Update(ctx context.Context, comment domain.Comment) (domain.Comment, error)
+	Delete(ctx context.Context, commentID string) error
 }
 
 func NewManager(log *slog.Logger, commentService CommentService) (*Manager, error) {
@@ -197,4 +197,8 @@ func (m *Manager) WebsocketHandler() http.Handler {
 			}
 			return originHeader == "http://localhost:3000"
 		}})
+}
+
+func (m *Manager) Stop(ctx context.Context) error {
+	return m.node.Shutdown(ctx)
 }

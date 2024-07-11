@@ -50,7 +50,7 @@ func NewComment(config Config) Service {
 	}
 }
 
-func (c Service) CreateComment(ctx context.Context, comment CreateCommentDTO) (domain.Comment, error) {
+func (c Service) Create(ctx context.Context, comment CreateCommentDTO) (domain.Comment, error) {
 	//TODO implement me
 
 	return domain.Comment{
@@ -62,12 +62,12 @@ func (c Service) CreateComment(ctx context.Context, comment CreateCommentDTO) (d
 	}, nil
 }
 
-func (c Service) UpdateComment(ctx context.Context, comment domain.Comment) (domain.Comment, error) {
+func (c Service) Update(ctx context.Context, comment domain.Comment) (domain.Comment, error) {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (c Service) DeleteComment(ctx context.Context, commentID string) error {
+func (c Service) Delete(ctx context.Context, commentID string) error {
 	//TODO implement me
 	panic("implement me")
 }
