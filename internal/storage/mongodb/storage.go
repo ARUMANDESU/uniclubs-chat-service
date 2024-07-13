@@ -4,8 +4,6 @@ import (
 	"context"
 	"fmt"
 	"github.com/ARUMANDESU/uniclubs-comments-service/internal/config"
-	"github.com/ARUMANDESU/uniclubs-comments-service/internal/domain"
-	"github.com/ARUMANDESU/uniclubs-comments-service/internal/services/commentservice"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"go.mongodb.org/mongo-driver/mongo/readpref"
@@ -45,29 +43,4 @@ func (s *Storage) Stop(ctx context.Context) error {
 	}
 
 	return nil
-}
-
-func (s *Storage) GetComment(ctx context.Context, commentID string) (domain.Comment, error) {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (s *Storage) GetPostComments(ctx context.Context, postID string) ([]domain.Comment, error) {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (s *Storage) CreateComment(ctx context.Context, comment commentservice.CreateCommentDTO) (domain.Comment, error) {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (s *Storage) DeleteComment(ctx context.Context, commentID string) error {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (s *Storage) UpdateComment(ctx context.Context, comment domain.Comment) (domain.Comment, error) {
-	//TODO implement me
-	panic("implement me")
 }

@@ -29,7 +29,7 @@ type Provider interface {
 }
 
 type Creator interface {
-	CreateComment(ctx context.Context, comment CreateCommentDTO) (domain.Comment, error)
+	CreateComment(ctx context.Context, comment domain.Comment) (domain.Comment, error)
 }
 
 type Updater interface {
