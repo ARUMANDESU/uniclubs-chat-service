@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"github.com/ARUMANDESU/uniclubs-comments-service/internal/app"
@@ -32,9 +33,13 @@ func main() {
 		slog.String("port", cfg.HTTP.Address),
 	)
 
-	application := app.New(*cfg, log)
+	application := app.New(context.Background(), *cfg, log)
 
-	application.Start()
+	err = application.Start()
+	if err != nil {
+		log.Error("failed to start application", logger.Err(err))
+		os.Exit(1)
+	}
 
 	log.Info("application started")
 

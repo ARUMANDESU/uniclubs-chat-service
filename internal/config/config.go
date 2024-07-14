@@ -11,6 +11,7 @@ import (
 type Config struct {
 	Env             string        `yaml:"env" env:"ENV" env-default:"local"`
 	HTTP            HTTP          `yaml:"http"`
+	StartTimeout    time.Duration `yaml:"start_timeout" env:"START_TIMEOUT" env-default:"10s"`
 	ShutdownTimeout time.Duration `yaml:"shutdown_timeout" env:"SHUTDOWN_TIMEOUT" env-default:"10s"`
 	MongoDB         MongoDB       `yaml:"mongodb"`
 	//GRPC     GRPC     `yaml:"grpc"`

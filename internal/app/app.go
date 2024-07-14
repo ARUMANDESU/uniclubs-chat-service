@@ -10,6 +10,7 @@ import (
 	"github.com/ARUMANDESU/uniclubs-comments-service/internal/ws"
 	"github.com/ARUMANDESU/uniclubs-comments-service/pkg/logger"
 	"log/slog"
+	"sync"
 )
 
 type App struct {
@@ -32,14 +33,14 @@ type Stopper interface {
 //	It initializes all the services and repositories required by the app
 //	It creates a new HTTP server instance
 //	It returns a new App instance
-func New(cfg config.Config, log *slog.Logger) *App {
+func New(ctx context.Context, cfg config.Config, log *slog.Logger) *App {
 	const op = "app.new"
 	l := log.With(slog.String("op", op))
 
 	starters := make([]Starter, 0)
 	stoppers := make([]Stopper, 0)
 
-	mongoStorage, err := mongodb.NewStorage(context.Background(), cfg.MongoDB)
+	mongoStorage, err := mongodb.NewStorage(ctx, cfg.MongoDB)
 	if err != nil {
 		l.Error("failed to create mongodb storage", logger.Err(err))
 		panic(err)
@@ -64,7 +65,7 @@ func New(cfg config.Config, log *slog.Logger) *App {
 	handler := handlers.NewHandler(log, wsManager)
 	handler.RegisterRoutes()
 
-	httpServer := httpapp.New(cfg, handler.Mux)
+	httpServer := httpapp.New(cfg, log, handler.Mux)
 	starters = append(starters, httpServer)
 	stoppers = append(stoppers, httpServer)
 
@@ -76,18 +77,47 @@ func New(cfg config.Config, log *slog.Logger) *App {
 	}
 }
 
-func (a *App) Start() {
+func (a *App) Start() error {
 	const op = "app.start"
 	log := a.log.With(slog.String("op", op))
 
+	var wg sync.WaitGroup
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	// Channel to signal an error
+	errCh := make(chan error, 1)
+
 	for _, s := range a.starters {
+		wg.Add(1)
 		go func(s Starter) {
-			if err := s.Start(context.Background()); err != nil {
+			defer wg.Done()
+			startCtx, startCancel := context.WithTimeout(ctx, a.cfg.StartTimeout)
+			defer startCancel()
+
+			if err := s.Start(startCtx); err != nil {
 				log.Error("failed to start service", logger.Err(err))
+				select {
+				case errCh <- err:
+				default:
+				}
 			}
 		}(s)
 	}
 
+	// Wait for either all services to start or an error to occur
+	go func() {
+		wg.Wait()
+		close(errCh)
+	}()
+
+	select {
+	case err := <-errCh:
+		cancel()
+		return err
+	case <-ctx.Done():
+		return nil
+	}
 }
 
 // Stop gracefully stops the app
@@ -101,11 +131,18 @@ func (a *App) Stop() {
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), a.cfg.ShutdownTimeout)
 	defer cancel()
 
+	var wg sync.WaitGroup
+
 	for _, s := range a.stoppers {
+		wg.Add(1)
 		go func(s Stopper) {
+			defer wg.Done()
 			if err := s.Stop(shutdownCtx); err != nil {
 				log.Error("failed to stop service", logger.Err(err))
 			}
 		}(s)
 	}
+
+	// Wait for all services to stop
+	wg.Wait()
 }

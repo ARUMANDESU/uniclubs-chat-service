@@ -5,10 +5,14 @@ import (
 	"errors"
 	"fmt"
 	"github.com/ARUMANDESU/uniclubs-comments-service/internal/config"
+	"github.com/ARUMANDESU/uniclubs-comments-service/pkg/logger"
+	"log/slog"
 	"net/http"
 )
 
 type Server struct {
+	log *slog.Logger
+
 	HTTPServer *http.Server
 }
 
@@ -30,7 +34,7 @@ type Server struct {
 //
 //	This function is usually called during the application's initialization phase
 //	to set up the main HTTP server based on the specified configurations.
-func New(cfg config.Config, handler http.Handler) Server {
+func New(cfg config.Config, log *slog.Logger, handler http.Handler) Server {
 	httpServer := &http.Server{
 		Addr:           cfg.HTTP.Address,
 		Handler:        handler,
@@ -40,7 +44,10 @@ func New(cfg config.Config, handler http.Handler) Server {
 		IdleTimeout:    cfg.HTTP.IdleTimeout,
 	}
 
-	return Server{HTTPServer: httpServer}
+	return Server{
+		log:        log,
+		HTTPServer: httpServer,
+	}
 }
 
 // MustStart starts the HTTP server and panics if an error occurs.
@@ -66,11 +73,14 @@ func (s Server) MustStart() {
 //   - An error if the starting process encounters any issues; otherwise, nil.
 func (s Server) Start(_ context.Context) error {
 	const op = "app.http.start"
+	log := s.log.With(slog.String("op", op))
 
-	err := s.HTTPServer.ListenAndServe()
-	if err != nil && !errors.Is(err, http.ErrServerClosed) {
-		return fmt.Errorf("%s: %w", op, err)
-	}
+	go func() {
+		err := s.HTTPServer.ListenAndServe()
+		if err != nil && !errors.Is(err, http.ErrServerClosed) {
+			log.Error("failed to start http server", logger.Err(err))
+		}
+	}()
 
 	return nil
 }
@@ -88,10 +98,11 @@ func (s Server) Start(_ context.Context) error {
 //   - An error if the shutdown process encounters any issues; otherwise, nil.
 func (s Server) Stop(ctx context.Context) error {
 	const op = "app.http.stop"
-	err := s.HTTPServer.Shutdown(ctx)
 
+	err := s.HTTPServer.Shutdown(ctx)
 	if err != nil {
 		return fmt.Errorf("%s: %w", op, err)
 	}
+
 	return nil
 }
