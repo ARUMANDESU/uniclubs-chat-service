@@ -27,3 +27,16 @@ func (s *Storage) GetUserByID(ctx context.Context, id int64) (domain.User, error
 
 	return user.ToDomain(), nil
 }
+
+func (s *Storage) SaveUser(ctx context.Context, domainUser domain.User) error {
+	const op = "storage.mongodb.save_user"
+
+	user := dao.UserFromDomain(domainUser)
+
+	_, err := s.commentCollection.InsertOne(ctx, user)
+	if err != nil {
+		return fmt.Errorf("%s: %w", op, err)
+	}
+
+	return nil
+}

@@ -3,8 +3,8 @@ package commentservice
 import (
 	"context"
 	"errors"
-	userclient "github.com/ARUMANDESU/uniclubs-comments-service/internal/client/user"
 	"github.com/ARUMANDESU/uniclubs-comments-service/internal/domain"
+	"github.com/ARUMANDESU/uniclubs-comments-service/internal/services/userservice"
 	"github.com/ARUMANDESU/uniclubs-comments-service/internal/storage"
 	"github.com/ARUMANDESU/uniclubs-comments-service/pkg/logger"
 	"log/slog"
@@ -35,28 +35,33 @@ type Service struct {
 	userProvider UserProvider
 }
 
+//go:generate mockery --name Provider
 type Provider interface {
 	GetComment(ctx context.Context, commentID string) (domain.Comment, error)
 	GetPostComments(ctx context.Context, postID string) ([]domain.Comment, error)
 }
 
+//go:generate mockery --name Creator
 type Creator interface {
 	CreateComment(ctx context.Context, comment domain.Comment) (domain.Comment, error)
 }
 
+//go:generate mockery --name Updater
 type Updater interface {
 	UpdateComment(ctx context.Context, comment domain.Comment) (domain.Comment, error)
 }
 
+//go:generate mockery --name Deleter
 type Deleter interface {
 	DeleteComment(ctx context.Context, commentID string) error
 }
 
+//go:generate mockery --name UserProvider
 type UserProvider interface {
 	GetUser(ctx context.Context, id int64) (domain.User, error)
 }
 
-func NewComment(config Config) Service {
+func New(config Config) Service {
 	return Service{
 		log:          config.Logger,
 		provider:     config.Provider,
@@ -104,9 +109,9 @@ func handleErr(log *slog.Logger, op string, err error) error {
 	switch {
 	case errors.Is(err, storage.ErrInvalidID):
 		return ErrInvalidID
-	case errors.Is(err, storage.ErrNotFound), errors.Is(err, userclient.ErrUserNotFound):
+	case errors.Is(err, storage.ErrNotFound), errors.Is(err, userservice.ErrUserNotFound):
 		return ErrNotFound
-	case errors.Is(err, userclient.ErrInvalidArg):
+	case errors.Is(err, userservice.ErrInvalidArg):
 		return ErrInvalidArg
 	default:
 		log.Error(op, logger.Err(err))
