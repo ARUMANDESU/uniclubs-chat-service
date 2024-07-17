@@ -14,6 +14,7 @@ type Config struct {
 	StartTimeout    time.Duration `yaml:"start_timeout" env:"START_TIMEOUT" env-default:"10s"`
 	ShutdownTimeout time.Duration `yaml:"shutdown_timeout" env:"SHUTDOWN_TIMEOUT" env-default:"10s"`
 	MongoDB         MongoDB       `yaml:"mongodb"`
+	Clients         ClientsConfig `yaml:"clients"`
 	//GRPC     GRPC     `yaml:"grpc"`
 	//Rabbitmq Rabbitmq `yaml:"rabbitmq"`
 }
@@ -41,6 +42,14 @@ type Rabbitmq struct {
 	Password string `yaml:"password" env:"RABBITMQ_PASSWORD"`
 	Host     string `yaml:"host" env:"RABBITMQ_HOST"`
 	Port     string `yaml:"port" env:"RABBITMQ_PORT"`
+}
+
+type ClientsConfig struct {
+	User struct {
+		Address      string        `yaml:"address" env:"USER_SERVICE_ADDRESS"`
+		Timeout      time.Duration `yaml:"timeout" env:"USER_SERVICE_TIMEOUT"`
+		RetriesCount int           `yaml:"retries_count" env:"USER_SERVICE_RETRIES_COUNT"`
+	} `yaml:"user"`
 }
 
 func MustLoad() *Config {

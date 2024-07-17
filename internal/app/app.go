@@ -3,9 +3,11 @@ package app
 import (
 	"context"
 	"github.com/ARUMANDESU/uniclubs-comments-service/internal/app/httpapp"
+	userclient "github.com/ARUMANDESU/uniclubs-comments-service/internal/client/user"
 	"github.com/ARUMANDESU/uniclubs-comments-service/internal/config"
 	"github.com/ARUMANDESU/uniclubs-comments-service/internal/handlers"
 	"github.com/ARUMANDESU/uniclubs-comments-service/internal/services/commentservice"
+	"github.com/ARUMANDESU/uniclubs-comments-service/internal/services/userservice"
 	"github.com/ARUMANDESU/uniclubs-comments-service/internal/storage/mongodb"
 	"github.com/ARUMANDESU/uniclubs-comments-service/internal/ws"
 	"github.com/ARUMANDESU/uniclubs-comments-service/pkg/logger"
@@ -47,12 +49,22 @@ func New(ctx context.Context, cfg config.Config, log *slog.Logger) *App {
 	}
 	stoppers = append(stoppers, &mongoStorage)
 
+	// user microservice grpc client
+	userClient, err := userclient.New(log, cfg.Clients.User.Address, cfg.Clients.User.Timeout, cfg.Clients.User.RetriesCount)
+	if err != nil {
+		log.Error("user service client init error", logger.Err(err))
+		panic(err)
+	}
+
+	userService := userservice.New(log, &mongoStorage, userClient)
+
 	commentService := commentservice.NewComment(commentservice.Config{
-		Logger:   log,
-		Provider: &mongoStorage,
-		Creator:  &mongoStorage,
-		Updater:  &mongoStorage,
-		Deleter:  &mongoStorage,
+		Logger:       log,
+		Provider:     &mongoStorage,
+		Creator:      &mongoStorage,
+		Updater:      &mongoStorage,
+		Deleter:      &mongoStorage,
+		UserProvider: &userService,
 	})
 
 	wsManager, err := ws.NewManager(log, commentService)

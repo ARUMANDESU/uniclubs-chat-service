@@ -122,17 +122,22 @@ This is a simple comments service for [AITU UCMS][aitu-ucms-url] project. It is 
 3. Write the environment variables in the `.env` file
    ```dotenv
    ENV=dev
-   GRPC_PORT=44046
+   
+   GRPC_PORT=<port>
    GRPC_TIMEOUT=10s
     
-   MONGODB_URI=mongodb://<user>:<password>@localhost:<port>
+   MONGODB_URI=mongodb://<user>:<password>@<host>:<port>
    MONGODB_PING_TIMEOUT=10s
-   MONGODB_DATABASE_NAME=your_database_name
+   MONGODB_DATABASE_NAME=<your_database_name>
     
-   RABBITMQ_USER=user
-   RABBITMQ_PASSWORD=password
-   RABBITMQ_HOST=localhost
-   RABBITMQ_PORT=5672
+   RABBITMQ_USER=<user>
+   RABBITMQ_PASSWORD=<password>
+   RABBITMQ_HOST=<host>
+   RABBITMQ_PORT=<port>
+   
+   USER_SERVICE_ADDRESS=<host>:<port>
+   USER_SERVICE_TIMEOUT=10s
+   USER_SERVICE_RETRIES_COUNT=2
    ```
 4. Run the service
    ```sh

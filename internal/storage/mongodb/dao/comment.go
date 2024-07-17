@@ -2,16 +2,17 @@ package dao
 
 import (
 	"github.com/ARUMANDESU/uniclubs-comments-service/internal/domain"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"time"
 )
 
 type Comment struct {
-	ID        string    `json:"id" bson:"_id"`
-	PostID    string    `json:"post_id" bson:"post_id"`
-	User      User      `json:"user" bson:"user"`
-	Body      string    `json:"body" bson:"body"`
-	CreatedAt time.Time `json:"created_at" bson:"created_at"`
-	UpdatedAt time.Time `json:"updated_at" bson:"updated_at"`
+	ID        primitive.ObjectID `json:"id" bson:"_id"`
+	PostID    string             `json:"post_id" bson:"post_id"`
+	User      User               `json:"user" bson:"user"`
+	Body      string             `json:"body" bson:"body"`
+	CreatedAt time.Time          `json:"created_at" bson:"created_at"`
+	UpdatedAt time.Time          `json:"updated_at" bson:"updated_at"`
 }
 
 func (c *Comment) ToDomain() domain.Comment {
@@ -20,7 +21,7 @@ func (c *Comment) ToDomain() domain.Comment {
 	}
 
 	return domain.Comment{
-		ID:        c.ID,
+		ID:        c.ID.Hex(),
 		PostID:    c.PostID,
 		User:      c.User.ToDomain(),
 		Body:      c.Body,
@@ -30,8 +31,10 @@ func (c *Comment) ToDomain() domain.Comment {
 }
 
 func CommentFromDomain(d domain.Comment) Comment {
+	objectID, _ := primitive.ObjectIDFromHex(d.ID)
+
 	return Comment{
-		ID:        d.ID,
+		ID:        objectID,
 		PostID:    d.PostID,
 		User:      UserFromDomain(d.User),
 		Body:      d.Body,

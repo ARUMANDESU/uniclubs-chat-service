@@ -55,6 +55,7 @@ func (s *Storage) CreateComment(ctx context.Context, domainComment domain.Commen
 	const op = "storage.mongodb.create_comment"
 
 	comment := dao.CommentFromDomain(domainComment)
+	comment.ID = primitive.NewObjectID()
 
 	result, err := s.commentCollection.InsertOne(ctx, comment)
 	if err != nil {
