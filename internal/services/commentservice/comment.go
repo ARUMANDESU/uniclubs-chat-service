@@ -124,6 +124,30 @@ func (s Service) Delete(ctx context.Context, commentID string) error {
 	return nil
 }
 
+func (s Service) GetByID(ctx context.Context, commentID string) (domain.Comment, error) {
+	const op = "service.comment.get_by_id"
+	log := s.log.With(slog.String("op", op))
+
+	comment, err := s.provider.GetComment(ctx, commentID)
+	if err != nil {
+		return domain.Comment{}, handleErr(log, op, err)
+	}
+
+	return comment, nil
+}
+
+func (s Service) GetByPostID(ctx context.Context, postID string) ([]domain.Comment, error) {
+	const op = "service.comment.get_by_post_id"
+	log := s.log.With(slog.String("op", op))
+
+	comments, err := s.provider.GetPostComments(ctx, postID)
+	if err != nil {
+		return nil, handleErr(log, op, err)
+	}
+
+	return comments, nil
+}
+
 func handleErr(log *slog.Logger, op string, err error) error {
 	switch {
 	case errors.Is(err, domain.ErrInvalidID):

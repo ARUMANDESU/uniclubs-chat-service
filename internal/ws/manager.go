@@ -115,8 +115,6 @@ func (m *Manager) setupNode() error {
 				return
 			}
 
-			m.log.Info("received message", slog.AnyValue(msg))
-
 			publishReply, err := m.routeEvent(clientMessage{
 				Event:        msg,
 				Client:       client,

@@ -261,3 +261,89 @@ func TestService_Delete_FailPath(t *testing.T) {
 		})
 	}
 }
+
+func TestService_GetByID(t *testing.T) {
+	s := newSuite(t)
+	defer s.mockProvider.AssertExpectations(t)
+
+	s.mockProvider.On("GetComment", mock.Anything, "1").Return(domain.Comment{}, nil)
+
+	comment, err := s.Service.GetByID(context.Background(), "1")
+	assert.Nil(t, err)
+	assert.NotNil(t, comment)
+}
+
+func TestService_GetByID_FailPath(t *testing.T) {
+
+	tests := []struct {
+		name          string
+		onGetComment  error
+		expectedError error
+	}{
+		{
+			name:          "unexpected error",
+			onGetComment:  assert.AnError,
+			expectedError: domain.ErrInternal,
+		},
+		{
+			name:          "comment not found",
+			onGetComment:  domain.ErrCommentNotFound,
+			expectedError: domain.ErrCommentNotFound,
+		},
+		{
+			name:          "invalid id",
+			onGetComment:  domain.ErrInvalidID,
+			expectedError: domain.ErrInvalidID,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			s := newSuite(t)
+			defer s.mockProvider.AssertExpectations(t)
+
+			s.mockProvider.On("GetComment", mock.Anything, "1").Return(domain.Comment{}, tc.onGetComment)
+
+			_, err := s.Service.GetByID(context.Background(), "1")
+			assert.ErrorIs(t, err, tc.expectedError)
+		})
+	}
+}
+
+func TestService_GetByPostID(t *testing.T) {
+	s := newSuite(t)
+	defer s.mockProvider.AssertExpectations(t)
+
+	s.mockProvider.On("GetPostComments", mock.Anything, "1").Return([]domain.Comment{}, nil)
+
+	comments, err := s.Service.GetByPostID(context.Background(), "1")
+	assert.Nil(t, err)
+	assert.NotNil(t, comments)
+}
+
+func TestService_GetByPostID_FailPath(t *testing.T) {
+
+	tests := []struct {
+		name              string
+		onGetPostComments error
+		expectedError     error
+	}{
+		{
+			name:              "unexpected error",
+			onGetPostComments: assert.AnError,
+			expectedError:     domain.ErrInternal,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			s := newSuite(t)
+			defer s.mockProvider.AssertExpectations(t)
+
+			s.mockProvider.On("GetPostComments", mock.Anything, "1").Return([]domain.Comment{}, tc.onGetPostComments)
+
+			_, err := s.Service.GetByPostID(context.Background(), "1")
+			assert.ErrorIs(t, err, tc.expectedError)
+		})
+	}
+}

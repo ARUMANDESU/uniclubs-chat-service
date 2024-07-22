@@ -75,12 +75,10 @@ func (s Server) Start(_ context.Context) error {
 	const op = "app.http.start"
 	log := s.log.With(slog.String("op", op))
 
-	go func() {
-		err := s.HTTPServer.ListenAndServe()
-		if err != nil && !errors.Is(err, http.ErrServerClosed) {
-			log.Error("failed to start http server", logger.Err(err))
-		}
-	}()
+	err := s.HTTPServer.ListenAndServe()
+	if err != nil && !errors.Is(err, http.ErrServerClosed) {
+		log.Error("failed to start http server", logger.Err(err))
+	}
 
 	return nil
 }

@@ -4,6 +4,8 @@ import (
 	"context"
 	"github.com/ARUMANDESU/uniclubs-comments-service/internal/config"
 	"github.com/ARUMANDESU/uniclubs-comments-service/pkg/logger"
+	"github.com/thejerf/slogassert"
+	"log/slog"
 	"net/http"
 	"testing"
 	"time"
@@ -49,20 +51,17 @@ func TestServerStartAndStop(t *testing.T) {
 func TestServerStartFailure(t *testing.T) {
 	cfg := config.Config{
 		HTTP: config.HTTP{
-			Address:     "invalid_address",
-			Timeout:     10 * time.Second,
-			IdleTimeout: 10 * time.Second,
+			Address: "invalid_address",
 		},
 	}
 
-	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-	})
+	handler := slogassert.New(t, slog.LevelWarn, nil)
+	log := slog.New(handler)
 
-	server := New(cfg, logger.Plug(), handler)
+	server := New(cfg, log, nil)
 
-	err := server.Start(context.Background())
-	if err == nil {
-		t.Errorf("Expected error, got nil")
+	_ = server.Start(context.Background())
+	if handler.AssertSomeMessage("failed to start http server") == 0 {
+		t.Errorf("expected error message not found")
 	}
 }
