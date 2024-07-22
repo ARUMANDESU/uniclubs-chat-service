@@ -28,11 +28,6 @@ func main() {
 	cfg := config.MustLoad()
 	log := logger.Setup(cfg.Env)
 
-	log.Info("starting application",
-		slog.String("env", cfg.Env),
-		slog.String("port", cfg.HTTP.Address),
-	)
-
 	application := app.New(context.Background(), *cfg, log)
 
 	err = application.Start()

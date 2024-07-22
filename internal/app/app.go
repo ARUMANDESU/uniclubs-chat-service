@@ -24,6 +24,8 @@ type App struct {
 	starters []Starter
 }
 
+// Starter interface defines the Start method
+// Might panic if the service fails to start
 type Starter interface {
 	Start(ctx context.Context) error
 }
@@ -107,6 +109,8 @@ func (a *App) Start() error {
 
 	// Channel to signal an error
 	errCh := make(chan error, 1)
+
+	log.Info("starting application", slog.String("env", a.cfg.Env))
 
 	for _, s := range a.starters {
 		wg.Add(1)

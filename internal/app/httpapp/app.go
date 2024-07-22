@@ -69,16 +69,17 @@ func (s Server) MustStart() {
 
 // Start starts http server.
 //
-// Returns:
-//   - An error if the starting process encounters any issues; otherwise, nil.
+//   - Panics if the server fails to start.
 func (s Server) Start(_ context.Context) error {
 	const op = "app.http.start"
 	log := s.log.With(slog.String("op", op))
 
 	go func() {
+		log.Info("http server is running", slog.String("addr", s.HTTPServer.Addr))
 		err := s.HTTPServer.ListenAndServe()
 		if err != nil && !errors.Is(err, http.ErrServerClosed) {
 			log.Error("failed to start http server", logger.Err(err))
+			panic(err)
 		}
 	}()
 
@@ -98,7 +99,9 @@ func (s Server) Start(_ context.Context) error {
 //   - An error if the shutdown process encounters any issues; otherwise, nil.
 func (s Server) Stop(ctx context.Context) error {
 	const op = "app.http.stop"
+	log := s.log.With(slog.String("op", op))
 
+	log.Info("stopping http server")
 	err := s.HTTPServer.Shutdown(ctx)
 	if err != nil {
 		return fmt.Errorf("%s: %w", op, err)

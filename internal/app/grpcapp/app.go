@@ -33,12 +33,15 @@ func (a *App) MustRun() {
 	}
 }
 
+// Start starts the gRPC server
+//
+// Panics if an error occurs while starting the gRPC server
 func (a *App) Start(_ context.Context) error {
-	const op = "app.grpc.run"
+	const op = "app.grpc.start"
 
 	log := a.log.With(
 		slog.String("op", op),
-		slog.Int("grpc port", a.port),
+		slog.Int("port", a.port),
 	)
 
 	l, err := net.Listen("tcp", fmt.Sprintf(":%d", a.port))
@@ -47,9 +50,10 @@ func (a *App) Start(_ context.Context) error {
 	}
 
 	go func() {
-		log.Info("gRPCServer is running", slog.String("addr", l.Addr().String()))
+		log.Info("gRPC server is running", slog.String("addr", l.Addr().String()))
 		if err := a.gRPCServer.Serve(l); err != nil {
-			log.Error("gRPCServer error", slog.String("err", err.Error()))
+			log.Error("gRPC server error", slog.String("err", err.Error()))
+			panic(err)
 		}
 	}()
 
