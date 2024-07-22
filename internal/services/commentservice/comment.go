@@ -87,21 +87,43 @@ func (s Service) Create(ctx context.Context, comment CreateCommentDTO) (domain.C
 	return createdComment, nil
 }
 
-func (s Service) Update(ctx context.Context, comment domain.Comment) (domain.Comment, error) {
-	//TODO implement me
-	panic("implement me")
+func (s Service) Update(ctx context.Context, dto UpdateCommentDTO) (domain.Comment, error) {
+	const op = "service.comment.update"
+	log := s.log.With(slog.String("op", op))
+
+	comment, err := s.provider.GetComment(ctx, dto.CommentID)
+	if err != nil {
+		return domain.Comment{}, handleErr(log, op, err)
+	}
+
+	comment.Body = dto.Body
+	comment.UpdatedAt = time.Now()
+
+	updatedComment, err := s.updater.UpdateComment(ctx, comment)
+	if err != nil {
+		return domain.Comment{}, handleErr(log, op, err)
+	}
+
+	return updatedComment, nil
 }
 
 func (s Service) Delete(ctx context.Context, commentID string) error {
-	//TODO implement me
-	panic("implement me")
+	const op = "service.comment.delete"
+	log := s.log.With(slog.String("op", op))
+
+	err := s.deleter.DeleteComment(ctx, commentID)
+	if err != nil {
+		return handleErr(log, op, err)
+	}
+
+	return nil
 }
 
 func handleErr(log *slog.Logger, op string, err error) error {
 	switch {
 	case errors.Is(err, domain.ErrInvalidID):
 		return err
-	case errors.Is(err, domain.ErrUserNotFound):
+	case errors.Is(err, domain.ErrUserNotFound), errors.Is(err, domain.ErrCommentNotFound):
 		return err
 	case errors.Is(err, domain.ErrInvalidArg):
 		return err

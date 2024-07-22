@@ -28,7 +28,7 @@ type Manager struct {
 
 type CommentService interface {
 	Create(ctx context.Context, comment commentservice.CreateCommentDTO) (domain.Comment, error)
-	Update(ctx context.Context, comment domain.Comment) (domain.Comment, error)
+	Update(ctx context.Context, dto commentservice.UpdateCommentDTO) (domain.Comment, error)
 	Delete(ctx context.Context, commentID string) error
 }
 

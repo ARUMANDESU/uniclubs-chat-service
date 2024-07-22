@@ -92,6 +92,23 @@ func (s *Storage) DeleteComment(ctx context.Context, id string) error {
 }
 
 func (s *Storage) UpdateComment(ctx context.Context, comment domain.Comment) (domain.Comment, error) {
-	//TODO implement me
-	panic("implement me")
+	const op = "storage.mongodb.update_comment"
+
+	objectID, err := primitive.ObjectIDFromHex(comment.ID)
+	if err != nil {
+		if errors.Is(err, primitive.ErrInvalidHex) {
+			return domain.Comment{}, fmt.Errorf("%s: %w", op, domain.ErrInvalidID)
+		}
+		return domain.Comment{}, fmt.Errorf("%s: %w", op, err)
+	}
+
+	commentToUpdate := dao.CommentFromDomain(comment)
+	commentToUpdate.ID = objectID
+
+	_, err = s.commentCollection.ReplaceOne(ctx, bson.M{"_id": objectID}, commentToUpdate)
+	if err != nil {
+		return domain.Comment{}, fmt.Errorf("%s: %w", op, err)
+	}
+
+	return comment, nil
 }
