@@ -2,9 +2,11 @@ package app
 
 import (
 	"context"
+	"github.com/ARUMANDESU/uniclubs-comments-service/internal/app/grpcapp"
 	"github.com/ARUMANDESU/uniclubs-comments-service/internal/app/httpapp"
 	userclient "github.com/ARUMANDESU/uniclubs-comments-service/internal/client/user"
 	"github.com/ARUMANDESU/uniclubs-comments-service/internal/config"
+	"github.com/ARUMANDESU/uniclubs-comments-service/internal/grpc/commentgrpc"
 	"github.com/ARUMANDESU/uniclubs-comments-service/internal/handlers"
 	"github.com/ARUMANDESU/uniclubs-comments-service/internal/services/commentservice"
 	"github.com/ARUMANDESU/uniclubs-comments-service/internal/services/userservice"
@@ -80,6 +82,12 @@ func New(ctx context.Context, cfg config.Config, log *slog.Logger) *App {
 	httpServer := httpapp.New(cfg, log, handler.Mux)
 	starters = append(starters, httpServer)
 	stoppers = append(stoppers, httpServer)
+
+	grpcServer := commentgrpc.NewServer(commentService)
+
+	grpcApp := grpcapp.New(log, cfg.GRPC.Port, grpcServer)
+	starters = append(starters, grpcApp)
+	stoppers = append(stoppers, grpcApp)
 
 	return &App{
 		log:      log,

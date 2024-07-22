@@ -122,9 +122,16 @@ This is a simple comments service for [AITU UCMS][aitu-ucms-url] project. It is 
 3. Write the environment variables in the `.env` file
    ```dotenv
    ENV=dev
+
+   START_TIMEOUT=
+   SHUTDOWN_TIMEOUT=
    
-   GRPC_PORT=<port>
-   GRPC_TIMEOUT=10s
+   HTTP_ADDRESS=
+   HTTP_TIMEOUT=
+   HTTP_IDLE_TIMEOUT=
+   
+   GRPC_PORT=
+   GRPC_TIMEOUT=
     
    MONGODB_URI=mongodb://<user>:<password>@<host>:<port>
    MONGODB_PING_TIMEOUT=10s

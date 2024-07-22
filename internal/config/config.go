@@ -15,13 +15,12 @@ type Config struct {
 	ShutdownTimeout time.Duration `yaml:"shutdown_timeout" env:"SHUTDOWN_TIMEOUT" env-default:"10s"`
 	MongoDB         MongoDB       `yaml:"mongodb"`
 	Clients         ClientsConfig `yaml:"clients"`
-	//GRPC     GRPC     `yaml:"grpc"`
+	GRPC            GRPC          `yaml:"grpc"`
 	//Rabbitmq Rabbitmq `yaml:"rabbitmq"`
 }
 
 type HTTP struct {
 	Address     string        `yaml:"address" env:"HTTP_ADDRESS" env-default:"localhost:5000"`
-	Domain      string        `yaml:"domain" env:"HTTP_DOMAIN"`
 	Timeout     time.Duration `yaml:"timeout" env:"HTTP_TIMEOUT" env-default:"10s"`
 	IdleTimeout time.Duration `yaml:"idle_timeout" env:"HTTP_IDLE_TIMEOUT" env-default:"4s"`
 }
