@@ -111,7 +111,12 @@ func (s Service) Delete(ctx context.Context, commentID string) error {
 	const op = "service.comment.delete"
 	log := s.log.With(slog.String("op", op))
 
-	err := s.deleter.DeleteComment(ctx, commentID)
+	_, err := s.provider.GetComment(ctx, commentID)
+	if err != nil {
+		return handleErr(log, op, err)
+	}
+
+	err = s.deleter.DeleteComment(ctx, commentID)
 	if err != nil {
 		return handleErr(log, op, err)
 	}

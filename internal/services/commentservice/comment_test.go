@@ -203,3 +203,61 @@ func TestService_Update_FailPath(t *testing.T) {
 		})
 	}
 }
+
+func TestService_Delete(t *testing.T) {
+	s := newSuite(t)
+	defer s.mockProvider.AssertExpectations(t)
+	defer s.mockDeleter.AssertExpectations(t)
+
+	s.mockProvider.On("GetComment", mock.Anything, "1").Return(domain.Comment{}, nil)
+	s.mockDeleter.On("DeleteComment", mock.Anything, "1").Return(nil)
+
+	err := s.Service.Delete(context.Background(), "1")
+	assert.Nil(t, err)
+}
+
+func TestService_Delete_FailPath(t *testing.T) {
+
+	tests := []struct {
+		name          string
+		onGetComment  error
+		onDelete      error
+		expectedError error
+	}{
+		{
+			name:          "unexpected error",
+			onGetComment:  nil,
+			onDelete:      assert.AnError,
+			expectedError: domain.ErrInternal,
+		},
+		{
+			name:          "comment not found",
+			onGetComment:  domain.ErrCommentNotFound,
+			onDelete:      nil,
+			expectedError: domain.ErrCommentNotFound,
+		},
+		{
+			name:          "invalid id",
+			onGetComment:  domain.ErrInvalidID,
+			onDelete:      nil,
+			expectedError: domain.ErrInvalidID,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			s := newSuite(t)
+			defer s.mockProvider.AssertExpectations(t)
+			defer s.mockDeleter.AssertExpectations(t)
+
+			s.mockProvider.On("GetComment", mock.Anything, "1").Return(domain.Comment{}, tc.onGetComment)
+
+			if tc.onGetComment == nil {
+				s.mockDeleter.On("DeleteComment", mock.Anything, "1").Return(tc.onDelete)
+			}
+
+			err := s.Service.Delete(context.Background(), "1")
+			assert.ErrorIs(t, err, tc.expectedError)
+		})
+	}
+}
