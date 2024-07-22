@@ -30,7 +30,7 @@ type Service struct {
 //go:generate mockery --name Provider
 type Provider interface {
 	GetComment(ctx context.Context, commentID string) (domain.Comment, error)
-	GetPostComments(ctx context.Context, postID string) ([]domain.Comment, error)
+	ListPostComments(ctx context.Context, postID string, filter domain.Filter) ([]domain.Comment, domain.PaginationMetadata, error)
 }
 
 //go:generate mockery --name Creator
@@ -136,9 +136,16 @@ func (s Service) GetByID(ctx context.Context, id string) (domain.Comment, error)
 	return comment, nil
 }
 
-func (s Service) ListByPostID(ctx context.Context, postID string, filter domain.Filter) ([]domain.Comment, error) {
-	// TODO: implement me
-	panic("implement me")
+func (s Service) ListByPostID(ctx context.Context, postID string, filter domain.Filter) ([]domain.Comment, domain.PaginationMetadata, error) {
+	const op = "service.comment.list_by_post_id"
+	log := s.log.With(slog.String("op", op))
+
+	comments, metadata, err := s.provider.ListPostComments(ctx, postID, filter)
+	if err != nil {
+		return nil, domain.PaginationMetadata{}, handleErr(log, op, err)
+	}
+
+	return comments, metadata, nil
 }
 
 func handleErr(log *slog.Logger, op string, err error) error {

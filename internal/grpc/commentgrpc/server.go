@@ -14,7 +14,7 @@ type Server struct {
 
 type CommentService interface {
 	GetByID(ctx context.Context, id string) (domain.Comment, error)
-	ListByPostID(ctx context.Context, postID string, filter domain.Filter) ([]domain.Comment, error)
+	ListByPostID(ctx context.Context, postID string, filter domain.Filter) ([]domain.Comment, domain.PaginationMetadata, error)
 }
 
 func Register(gRPC *grpc.Server, server Server) {

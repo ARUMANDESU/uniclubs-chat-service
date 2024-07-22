@@ -8,6 +8,13 @@ const (
 	SortOrderDesc SortOrder = "desc"
 )
 
+func (s SortOrder) Mongo() int {
+	if s == SortOrderAsc {
+		return 1
+	}
+	return -1
+}
+
 const (
 	SortByCreatedAt SortBy = "created_at"
 	SortByUpdatedAt SortBy = "updated_at"
@@ -19,11 +26,18 @@ const (
 type FilterConfiguration func(filter *Filter) error
 
 type Filter struct {
-	Page      int
-	PageSize  int
+	Page      int32
+	PageSize  int32
 	SortBy    SortBy
 	SortOrder SortOrder
 	FilterMap map[string]bool
+}
+
+func (f Filter) Limit() int32 {
+	return f.PageSize
+}
+func (f Filter) Offset() int32 {
+	return (f.Page - 1) * f.PageSize
 }
 
 func NewFilter(cfgs ...FilterConfiguration) (*Filter, error) {
@@ -45,7 +59,7 @@ func NewFilter(cfgs ...FilterConfiguration) (*Filter, error) {
 	return filter, nil
 }
 
-func WithPage(page int) FilterConfiguration {
+func WithPage(page int32) FilterConfiguration {
 	if page < 1 {
 		page = 1
 	}
@@ -57,7 +71,7 @@ func WithPage(page int) FilterConfiguration {
 	}
 }
 
-func WithPageSize(pageSize int) FilterConfiguration {
+func WithPageSize(pageSize int32) FilterConfiguration {
 	if pageSize < 1 {
 		pageSize = 1
 	}
