@@ -4,17 +4,9 @@ import (
 	"context"
 	"errors"
 	"github.com/ARUMANDESU/uniclubs-comments-service/internal/domain"
-	"github.com/ARUMANDESU/uniclubs-comments-service/internal/services/userservice"
-	"github.com/ARUMANDESU/uniclubs-comments-service/internal/storage"
 	"github.com/ARUMANDESU/uniclubs-comments-service/pkg/logger"
 	"log/slog"
 	"time"
-)
-
-var (
-	ErrInvalidID  = errors.New("invalid id")
-	ErrNotFound   = errors.New("not found")
-	ErrInvalidArg = errors.New("invalid argument")
 )
 
 type Config struct {
@@ -107,14 +99,14 @@ func (s Service) Delete(ctx context.Context, commentID string) error {
 
 func handleErr(log *slog.Logger, op string, err error) error {
 	switch {
-	case errors.Is(err, storage.ErrInvalidID):
-		return ErrInvalidID
-	case errors.Is(err, storage.ErrNotFound), errors.Is(err, userservice.ErrUserNotFound):
-		return ErrNotFound
-	case errors.Is(err, userservice.ErrInvalidArg):
-		return ErrInvalidArg
+	case errors.Is(err, domain.ErrInvalidID):
+		return err
+	case errors.Is(err, domain.ErrUserNotFound):
+		return err
+	case errors.Is(err, domain.ErrInvalidArg):
+		return err
 	default:
 		log.Error(op, logger.Err(err))
-		return err
+		return domain.ErrInternal
 	}
 }

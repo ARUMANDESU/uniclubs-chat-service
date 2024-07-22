@@ -2,6 +2,7 @@ package userservice
 
 import (
 	"context"
+	"errors"
 	"github.com/ARUMANDESU/uniclubs-comments-service/internal/domain"
 	"github.com/ARUMANDESU/uniclubs-comments-service/internal/services/userservice/mocks"
 	"github.com/ARUMANDESU/uniclubs-comments-service/pkg/logger"
@@ -14,56 +15,76 @@ type Suite struct {
 	Service               Service
 	mockPrimaryProvider   *mocks.UserProvider
 	mockSecondaryProvider *mocks.UserProvider
-	mockSaver             *mocks.UserSaver
 }
 
 func NewSuite(t *testing.T) *Suite {
 	s := &Suite{
 		mockPrimaryProvider:   mocks.NewUserProvider(t),
 		mockSecondaryProvider: mocks.NewUserProvider(t),
-		mockSaver:             mocks.NewUserSaver(t),
 	}
-	s.Service = New(logger.Plug(), s.mockPrimaryProvider, s.mockSecondaryProvider, s.mockSaver)
+	s.Service = New(logger.Plug(), s.mockPrimaryProvider, s.mockSecondaryProvider)
 	return s
 }
 
-func TestService_GetUser_PrimaryProviderSuccess(t *testing.T) {
-	s := NewSuite(t)
-	defer s.mockPrimaryProvider.AssertExpectations(t)
+func TestService_GetUser(t *testing.T) {
+	tests := []struct {
+		name                   string
+		userId                 int64
+		primaryProviderError   error
+		secondaryProviderError error
+		expectedError          error
+	}{
+		{
+			name:                   "Primary provider success",
+			userId:                 1,
+			primaryProviderError:   nil,
+			secondaryProviderError: nil,
+			expectedError:          nil,
+		},
+		{
+			name:                   "Primary provider fail",
+			userId:                 1,
+			primaryProviderError:   domain.ErrUserNotFound,
+			secondaryProviderError: nil,
+			expectedError:          nil,
+		},
+		{
+			name:                   "All providers fail",
+			userId:                 1,
+			primaryProviderError:   domain.ErrUserNotFound,
+			secondaryProviderError: domain.ErrUserNotFound,
+			expectedError:          domain.ErrUserNotFound,
+		},
+		{
+			name:                   "Unexpected error, but secondary provider success",
+			userId:                 1,
+			primaryProviderError:   errors.New("unexpected error"),
+			secondaryProviderError: nil,
+			expectedError:          nil,
+		},
+		{
+			name:                   "Unexpected error",
+			userId:                 1,
+			primaryProviderError:   errors.New("unexpected error"),
+			secondaryProviderError: errors.New("unexpected error"),
+			expectedError:          domain.ErrInternal,
+		},
+	}
 
-	s.mockPrimaryProvider.On("GetUserByID", mock.Anything, int64(1)).Return(domain.User{}, nil)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := NewSuite(t)
 
-	user, err := s.Service.GetUser(context.Background(), int64(1))
-	assert.Nil(t, err)
-	assert.NotNil(t, user)
+			defer s.mockPrimaryProvider.AssertExpectations(t)
+			s.mockPrimaryProvider.On("GetUserByID", mock.Anything, tt.userId).Return(domain.User{}, tt.primaryProviderError)
 
-}
+			if tt.primaryProviderError != nil {
+				defer s.mockSecondaryProvider.AssertExpectations(t)
+				s.mockSecondaryProvider.On("GetUserByID", mock.Anything, tt.userId).Return(domain.User{}, tt.secondaryProviderError)
+			}
 
-func TestService_GetUser_PrimaryProviderFail(t *testing.T) {
-	s := NewSuite(t)
-	defer s.mockPrimaryProvider.AssertExpectations(t)
-	defer s.mockSecondaryProvider.AssertExpectations(t)
-	defer s.mockSaver.AssertExpectations(t)
-
-	s.mockPrimaryProvider.On("GetUserByID", mock.Anything, int64(1)).Return(domain.User{}, ErrUserNotFound)
-	s.mockSecondaryProvider.On("GetUserByID", mock.Anything, int64(1)).Return(domain.User{}, nil)
-	s.mockSaver.On("SaveUser", mock.Anything, mock.Anything).Return(nil)
-
-	user, err := s.Service.GetUser(context.Background(), int64(1))
-	assert.Nil(t, err)
-	assert.NotNil(t, user)
-}
-
-func TestService_GetUser_AllProvidersFail(t *testing.T) {
-	s := NewSuite(t)
-	defer s.mockPrimaryProvider.AssertExpectations(t)
-	defer s.mockSecondaryProvider.AssertExpectations(t)
-	defer s.mockSaver.AssertExpectations(t)
-
-	s.mockPrimaryProvider.On("GetUserByID", mock.Anything, int64(1)).Return(domain.User{}, ErrUserNotFound)
-	s.mockSecondaryProvider.On("GetUserByID", mock.Anything, int64(1)).Return(domain.User{}, ErrUserNotFound)
-
-	_, err := s.Service.GetUser(context.Background(), int64(1))
-	assert.NotNil(t, err)
-	assert.ErrorIs(t, err, ErrUserNotFound)
+			_, err := s.Service.GetUser(context.Background(), tt.userId)
+			assert.ErrorIs(t, err, tt.expectedError)
+		})
+	}
 }

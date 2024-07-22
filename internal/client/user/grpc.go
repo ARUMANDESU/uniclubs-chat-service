@@ -2,7 +2,6 @@ package userclient
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"github.com/ARUMANDESU/uniclubs-comments-service/internal/domain"
 	"github.com/ARUMANDESU/uniclubs-comments-service/pkg/logger"
@@ -15,11 +14,6 @@ import (
 	"google.golang.org/grpc/status"
 	"log/slog"
 	"time"
-)
-
-var (
-	ErrUserNotFound = errors.New("user not found")
-	ErrInvalidArg   = errors.New("invalid argument")
 )
 
 type Client struct {
@@ -70,9 +64,9 @@ func (c *Client) GetUserByID(ctx context.Context, id int64) (domain.User, error)
 	if err != nil {
 		switch {
 		case status.Code(err) == codes.InvalidArgument:
-			return domain.User{}, ErrInvalidArg
+			return domain.User{}, domain.ErrInvalidArg
 		case status.Code(err) == codes.NotFound:
-			return domain.User{}, ErrUserNotFound
+			return domain.User{}, domain.ErrUserNotFound
 		default:
 			log.Error("internal", logger.Err(err))
 			return domain.User{}, err

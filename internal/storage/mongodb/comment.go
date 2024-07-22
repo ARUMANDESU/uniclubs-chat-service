@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"github.com/ARUMANDESU/uniclubs-comments-service/internal/domain"
-	"github.com/ARUMANDESU/uniclubs-comments-service/internal/storage"
 	"github.com/ARUMANDESU/uniclubs-comments-service/internal/storage/mongodb/dao"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -18,7 +17,7 @@ func (s *Storage) GetComment(ctx context.Context, id string) (domain.Comment, er
 	objectID, err := primitive.ObjectIDFromHex(id)
 	if err != nil {
 		if errors.Is(err, primitive.ErrInvalidHex) {
-			return domain.Comment{}, fmt.Errorf("%s: %w", op, storage.ErrInvalidID)
+			return domain.Comment{}, fmt.Errorf("%s: %w", op, domain.ErrInvalidID)
 		}
 		return domain.Comment{}, fmt.Errorf("%s: %w", op, err)
 	}
@@ -27,7 +26,7 @@ func (s *Storage) GetComment(ctx context.Context, id string) (domain.Comment, er
 	err = s.commentCollection.FindOne(ctx, objectID).Decode(&comment)
 	if err != nil {
 		if errors.Is(err, mongo.ErrNoDocuments) {
-			return domain.Comment{}, fmt.Errorf("%s: %w", op, storage.ErrNotFound)
+			return domain.Comment{}, fmt.Errorf("%s: %w", op, domain.ErrCommentNotFound)
 		}
 		return domain.Comment{}, fmt.Errorf("%s: %w", op, err)
 	}
@@ -65,7 +64,7 @@ func (s *Storage) CreateComment(ctx context.Context, domainComment domain.Commen
 	err = s.commentCollection.FindOne(ctx, result.InsertedID).Decode(&comment)
 	if err != nil {
 		if errors.Is(err, mongo.ErrNoDocuments) {
-			return domain.Comment{}, fmt.Errorf("%s: %w", op, storage.ErrNotFound)
+			return domain.Comment{}, fmt.Errorf("%s: %w", op, domain.ErrCommentNotFound)
 		}
 		return domain.Comment{}, fmt.Errorf("%s: %w", op, err)
 	}
@@ -79,7 +78,7 @@ func (s *Storage) DeleteComment(ctx context.Context, id string) error {
 	objectID, err := primitive.ObjectIDFromHex(id)
 	if err != nil {
 		if errors.Is(err, primitive.ErrInvalidHex) {
-			return fmt.Errorf("%s: %w", op, storage.ErrInvalidID)
+			return fmt.Errorf("%s: %w", op, domain.ErrInvalidID)
 		}
 		return fmt.Errorf("%s: %w", op, err)
 	}

@@ -56,7 +56,7 @@ func New(ctx context.Context, cfg config.Config, log *slog.Logger) *App {
 		panic(err)
 	}
 
-	userService := userservice.New(log, &mongoStorage, userClient, &mongoStorage)
+	userService := userservice.New(log, &mongoStorage, userClient)
 
 	commentService := commentservice.New(commentservice.Config{
 		Logger:       log,
