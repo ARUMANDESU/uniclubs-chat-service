@@ -8,7 +8,7 @@ import (
 
 type Comment struct {
 	ID        primitive.ObjectID `json:"id" bson:"_id"`
-	PostID    string             `json:"post_id" bson:"post_id"`
+	PostID    primitive.ObjectID `json:"post_id" bson:"post_id"`
 	User      User               `json:"user" bson:"user"`
 	Body      string             `json:"body" bson:"body"`
 	CreatedAt time.Time          `json:"created_at" bson:"created_at"`
@@ -22,7 +22,7 @@ func (c *Comment) ToDomain() domain.Comment {
 
 	return domain.Comment{
 		ID:        c.ID.Hex(),
-		PostID:    c.PostID,
+		PostID:    c.PostID.Hex(),
 		User:      c.User.ToDomain(),
 		Body:      c.Body,
 		CreatedAt: c.CreatedAt,
@@ -30,17 +30,24 @@ func (c *Comment) ToDomain() domain.Comment {
 	}
 }
 
-func CommentFromDomain(d domain.Comment) Comment {
-	objectID, _ := primitive.ObjectIDFromHex(d.ID)
+func CommentFromDomain(d domain.Comment) (Comment, error) {
+	objectID, err := primitive.ObjectIDFromHex(d.ID)
+	if err != nil {
+		return Comment{}, err
+	}
+	postID, err := primitive.ObjectIDFromHex(d.PostID)
+	if err != nil {
+		return Comment{}, err
+	}
 
 	return Comment{
 		ID:        objectID,
-		PostID:    d.PostID,
+		PostID:    postID,
 		User:      UserFromDomain(d.User),
 		Body:      d.Body,
 		CreatedAt: d.CreatedAt,
 		UpdatedAt: d.UpdatedAt,
-	}
+	}, nil
 }
 
 func CommentsToDomain(comments []Comment) []domain.Comment {

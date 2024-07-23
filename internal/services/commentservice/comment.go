@@ -74,6 +74,7 @@ func (s Service) Create(ctx context.Context, comment CreateCommentDTO) (domain.C
 	}
 
 	createdComment, err := s.creator.CreateComment(ctx, domain.Comment{
+		ID:        domain.NewID(),
 		PostID:    comment.PostID,
 		User:      user,
 		Body:      comment.Body,
