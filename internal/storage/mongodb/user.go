@@ -19,7 +19,7 @@ func (s *Storage) GetUserByID(ctx context.Context, id int64) (domain.User, error
 	err := s.commentCollection.FindOne(ctx, filter).Decode(&user)
 	if err != nil {
 		if errors.Is(err, mongo.ErrNoDocuments) {
-			return domain.User{}, fmt.Errorf("%s: %w", op, domain.ErrUserNotFound)
+			return domain.User{}, domain.ErrUserNotFound
 		}
 		return domain.User{}, fmt.Errorf("%s: %w", op, err)
 	}

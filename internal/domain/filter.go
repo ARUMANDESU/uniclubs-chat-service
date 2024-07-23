@@ -16,8 +16,9 @@ func (s SortOrder) Mongo() int {
 }
 
 const (
-	SortByCreatedAt SortBy = "created_at"
-	SortByUpdatedAt SortBy = "updated_at"
+	SortByUnspecified SortBy = ""
+	SortByCreatedAt   SortBy = "created_at"
+	SortByUpdatedAt   SortBy = "updated_at"
 )
 
 // made just for fun
@@ -73,7 +74,7 @@ func WithPage(page int32) FilterConfiguration {
 
 func WithPageSize(pageSize int32) FilterConfiguration {
 	if pageSize < 1 {
-		pageSize = 1
+		pageSize = 25
 	}
 
 	return func(filter *Filter) error {
@@ -84,9 +85,6 @@ func WithPageSize(pageSize int32) FilterConfiguration {
 }
 
 func WithSortBy(sortBy SortBy) FilterConfiguration {
-	if sortBy == "" {
-		sortBy = SortByCreatedAt
-	}
 	return func(filter *Filter) error {
 		filter.SortBy = sortBy
 		filter.FilterMap["sort_by"] = true

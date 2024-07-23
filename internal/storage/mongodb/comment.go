@@ -18,16 +18,16 @@ func (s *Storage) GetComment(ctx context.Context, id string) (domain.Comment, er
 	objectID, err := primitive.ObjectIDFromHex(id)
 	if err != nil {
 		if errors.Is(err, primitive.ErrInvalidHex) {
-			return domain.Comment{}, fmt.Errorf("%s: %w", op, domain.ErrInvalidID)
+			return domain.Comment{}, domain.ErrInvalidID
 		}
 		return domain.Comment{}, fmt.Errorf("%s: %w", op, err)
 	}
 
 	var comment dao.Comment
-	err = s.commentCollection.FindOne(ctx, objectID).Decode(&comment)
+	err = s.commentCollection.FindOne(ctx, bson.M{"_id": objectID}).Decode(&comment)
 	if err != nil {
 		if errors.Is(err, mongo.ErrNoDocuments) {
-			return domain.Comment{}, fmt.Errorf("%s: %w", op, domain.ErrCommentNotFound)
+			return domain.Comment{}, domain.ErrCommentNotFound
 		}
 		return domain.Comment{}, fmt.Errorf("%s: %w", op, err)
 	}
@@ -45,7 +45,7 @@ func (s *Storage) ListPostComments(ctx context.Context, postID string, filters d
 	objectID, err := primitive.ObjectIDFromHex(postID)
 	if err != nil {
 		if errors.Is(err, primitive.ErrInvalidHex) {
-			return nil, domain.PaginationMetadata{}, fmt.Errorf("%s: %w", op, domain.ErrInvalidID)
+			return nil, domain.PaginationMetadata{}, domain.ErrInvalidID
 		}
 		return nil, domain.PaginationMetadata{}, fmt.Errorf("%s: %w", op, err)
 	}
@@ -57,7 +57,7 @@ func (s *Storage) ListPostComments(ctx context.Context, postID string, filters d
 		return nil, domain.PaginationMetadata{}, fmt.Errorf("%s: %w", op, err)
 	}
 	if totalRecords == 0 {
-		return nil, domain.PaginationMetadata{}, fmt.Errorf("%s: %w", op, domain.ErrCommentNotFound)
+		return nil, domain.PaginationMetadata{}, domain.ErrCommentNotFound
 	}
 
 	sort := bson.M{string(filters.SortBy): filters.SortOrder.Mongo()}
@@ -97,7 +97,7 @@ func (s *Storage) CreateComment(ctx context.Context, domainComment domain.Commen
 	err = s.commentCollection.FindOne(ctx, result.InsertedID).Decode(&comment)
 	if err != nil {
 		if errors.Is(err, mongo.ErrNoDocuments) {
-			return domain.Comment{}, fmt.Errorf("%s: %w", op, domain.ErrCommentNotFound)
+			return domain.Comment{}, domain.ErrCommentNotFound
 		}
 		return domain.Comment{}, fmt.Errorf("%s: %w", op, err)
 	}
@@ -111,7 +111,7 @@ func (s *Storage) DeleteComment(ctx context.Context, id string) error {
 	objectID, err := primitive.ObjectIDFromHex(id)
 	if err != nil {
 		if errors.Is(err, primitive.ErrInvalidHex) {
-			return fmt.Errorf("%s: %w", op, domain.ErrInvalidID)
+			return domain.ErrInvalidID
 		}
 		return fmt.Errorf("%s: %w", op, err)
 	}
@@ -130,7 +130,7 @@ func (s *Storage) UpdateComment(ctx context.Context, comment domain.Comment) (do
 	objectID, err := primitive.ObjectIDFromHex(comment.ID)
 	if err != nil {
 		if errors.Is(err, primitive.ErrInvalidHex) {
-			return domain.Comment{}, fmt.Errorf("%s: %w", op, domain.ErrInvalidID)
+			return domain.Comment{}, domain.ErrInvalidID
 		}
 		return domain.Comment{}, fmt.Errorf("%s: %w", op, err)
 	}

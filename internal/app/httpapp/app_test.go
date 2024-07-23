@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/ARUMANDESU/uniclubs-comments-service/internal/config"
 	"github.com/ARUMANDESU/uniclubs-comments-service/pkg/logger"
+	"github.com/stretchr/testify/assert"
 	"github.com/thejerf/slogassert"
 	"log/slog"
 	"net/http"
@@ -27,13 +28,10 @@ func TestServerStartAndStop(t *testing.T) {
 	server := New(cfg, logger.Plug(), handler)
 
 	go func() {
-		if err := server.Start(context.Background()); err != nil {
-			t.Errorf("Failed to start server: %v", err)
-		}
+		server.Start(context.Background(), func(err error) {
+			assert.NoError(t, err)
+		})
 	}()
-
-	// Give the server some time to start
-	time.Sleep(1 * time.Second)
 
 	resp, err := http.Get("http://localhost:9090")
 	if err != nil {
@@ -60,8 +58,12 @@ func TestServerStartFailure(t *testing.T) {
 
 	server := New(cfg, log, nil)
 
-	_ = server.Start(context.Background())
-	if handler.AssertSomeMessage("failed to start http server") == 0 {
-		t.Errorf("expected error message not found")
-	}
+	done := make(chan struct{})
+	go func() {
+		server.Start(context.Background(), func(err error) {
+			assert.Error(t, err)
+			close(done)
+		})
+	}()
+	<-done
 }

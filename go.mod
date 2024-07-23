@@ -3,8 +3,9 @@ module github.com/ARUMANDESU/uniclubs-comments-service
 go 1.22.3
 
 require (
-	github.com/ARUMANDESU/uniclubs-protos v0.9.0
+	github.com/ARUMANDESU/uniclubs-protos v0.9.1
 	github.com/centrifugal/centrifuge v0.32.2
+	github.com/go-ozzo/ozzo-validation/v4 v4.3.0
 	github.com/grpc-ecosystem/go-grpc-middleware/v2 v2.1.0
 	github.com/ilyakaznacheev/cleanenv v1.5.0
 	github.com/joho/godotenv v1.5.1

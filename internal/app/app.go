@@ -27,7 +27,7 @@ type App struct {
 // Starter interface defines the Start method
 // Might panic if the service fails to start
 type Starter interface {
-	Start(ctx context.Context) error
+	Start(ctx context.Context, callback func(error))
 }
 
 type Stopper interface {
@@ -87,7 +87,7 @@ func New(ctx context.Context, cfg config.Config, log *slog.Logger) *App {
 
 	grpcServer := commentgrpc.NewServer(commentService)
 
-	grpcApp := grpcapp.New(log, cfg.GRPC.Port, grpcServer)
+	grpcApp := grpcapp.New(log, cfg.GRPC.Port, &grpcServer)
 	starters = append(starters, grpcApp)
 	stoppers = append(stoppers, grpcApp)
 
@@ -119,13 +119,15 @@ func (a *App) Start() error {
 			startCtx, startCancel := context.WithTimeout(ctx, a.cfg.StartTimeout)
 			defer startCancel()
 
-			if err := s.Start(startCtx); err != nil {
-				log.Error("failed to start service", logger.Err(err))
-				select {
-				case errCh <- err:
-				default:
+			s.Start(startCtx, func(err error) {
+				if err != nil {
+					log.Error("failed to start service", logger.Err(err))
+					select {
+					case errCh <- err:
+					default:
+					}
 				}
-			}
+			})
 		}(s)
 	}
 

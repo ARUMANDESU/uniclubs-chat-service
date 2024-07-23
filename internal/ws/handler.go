@@ -12,10 +12,10 @@ import (
 // handleCreateComment is an event handler that is triggered when a client sends a create_comment event
 func (m *Manager) handleCreateComment(message clientMessage) (centrifuge.PublishReply, error) {
 	var dto commentservice.CreateCommentDTO
-	/*err := json.Unmarshal(message.Event.Payload, &dto)
+	err := json.Unmarshal(message.Event.Payload, &dto)
 	if err != nil {
 		return centrifuge.PublishReply{}, err
-	}*/
+	}
 
 	// Create the comment
 	createdComment, err := m.commentService.Create(context.TODO(), dto)

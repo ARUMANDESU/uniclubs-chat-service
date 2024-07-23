@@ -50,27 +50,10 @@ func New(cfg config.Config, log *slog.Logger, handler http.Handler) Server {
 	}
 }
 
-// MustStart starts the HTTP server and panics if an error occurs.
-// This method is a convenience wrapper around the Start method,
-// ensuring that if the server fails to start, the application will
-// terminate immediately with a panic.
-//
-// Usage:
-//
-//	MustStart should only be used if you want the application to exit
-//	in case the server fails to start. For more controlled error handling,
-//	consider using the Start method directly.
-func (s Server) MustStart() {
-	err := s.Start(context.Background())
-	if err != nil {
-		panic(err)
-	}
-}
-
 // Start starts http server.
 //
 //   - Panics if the server fails to start.
-func (s Server) Start(_ context.Context) error {
+func (s Server) Start(_ context.Context, callback func(error)) {
 	const op = "app.http.start"
 	log := s.log.With(slog.String("op", op))
 
@@ -79,11 +62,10 @@ func (s Server) Start(_ context.Context) error {
 		err := s.HTTPServer.ListenAndServe()
 		if err != nil && !errors.Is(err, http.ErrServerClosed) {
 			log.Error("failed to start http server", logger.Err(err))
-			panic(err)
+			callback(err)
 		}
 	}()
 
-	return nil
 }
 
 // Stop gracefully shuts down the server without interrupting any active connections.

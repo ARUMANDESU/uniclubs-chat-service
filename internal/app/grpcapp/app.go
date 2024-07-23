@@ -2,8 +2,10 @@ package grpcapp
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/ARUMANDESU/uniclubs-comments-service/internal/grpc/commentgrpc"
+	commentv1 "github.com/ARUMANDESU/uniclubs-protos/gen/go/comment"
 	"google.golang.org/grpc"
 	"log/slog"
 	"net"
@@ -15,7 +17,7 @@ type App struct {
 	port       int
 }
 
-func New(log *slog.Logger, port int, server commentgrpc.Server) *App {
+func New(log *slog.Logger, port int, server commentv1.CommentServer) *App {
 	gRPCServer := grpc.NewServer()
 
 	commentgrpc.Register(gRPCServer, server)
@@ -27,16 +29,10 @@ func New(log *slog.Logger, port int, server commentgrpc.Server) *App {
 	}
 }
 
-func (a *App) MustRun() {
-	if err := a.Start(context.TODO()); err != nil {
-		panic(err)
-	}
-}
-
 // Start starts the gRPC server
 //
 // Panics if an error occurs while starting the gRPC server
-func (a *App) Start(_ context.Context) error {
+func (a *App) Start(_ context.Context, callback func(error)) {
 	const op = "app.grpc.start"
 
 	log := a.log.With(
@@ -46,18 +42,18 @@ func (a *App) Start(_ context.Context) error {
 
 	l, err := net.Listen("tcp", fmt.Sprintf(":%d", a.port))
 	if err != nil {
-		return fmt.Errorf("%s: %w", op, err)
+		callback(err)
+		return
 	}
 
 	go func() {
 		log.Info("gRPC server is running", slog.String("addr", l.Addr().String()))
-		if err := a.gRPCServer.Serve(l); err != nil {
+		if err := a.gRPCServer.Serve(l); err != nil && !errors.Is(err, grpc.ErrServerStopped) {
 			log.Error("gRPC server error", slog.String("err", err.Error()))
-			panic(err)
+			callback(err)
 		}
 	}()
 
-	return nil
 }
 
 func (a *App) Stop(_ context.Context) error {

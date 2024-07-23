@@ -15,9 +15,9 @@ type MockStarter struct {
 	mock.Mock
 }
 
-func (m *MockStarter) Start(ctx context.Context) error {
+func (m *MockStarter) Start(ctx context.Context, callback func(error)) {
 	args := m.Called(ctx)
-	return args.Error(0)
+	callback(args.Error(0))
 }
 
 type MockStopper struct {
