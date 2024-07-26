@@ -165,6 +165,8 @@ func (m *Manager) setupNode() error {
 // setupEventHandlers configures and adds all handlers
 func (m *Manager) setupEventHandlers() {
 	m.handlers[EventCreateComment] = m.handleCreateComment
+	m.handlers[EventUpdateComment] = m.handleUpdateComment
+	m.handlers[EventDeleteComment] = m.handleDeleteComment
 }
 
 // routeEvent routes the event to the correct handler
