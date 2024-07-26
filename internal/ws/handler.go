@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/ARUMANDESU/uniclubs-comments-service/internal/services/commentservice"
@@ -12,14 +13,25 @@ import (
 
 // handleCreateComment is an event handler that is triggered when a client sends a create_comment event
 func (m *Manager) handleCreateComment(message clientMessage) (centrifuge.PublishReply, error) {
-	var dto commentservice.CreateCommentDTO
-	err := json.Unmarshal(message.Event.Payload, &dto)
+	var input struct {
+		Body   string `json:"body"`
+		PostID string `json:"post_id"`
+	}
+	err := json.Unmarshal(message.Event.Payload, &input)
 	if err != nil {
 		return centrifuge.PublishReply{}, err
 	}
 
-	// Create the comment
-	createdComment, err := m.commentService.Create(context.TODO(), dto)
+	userID, err := strconv.ParseInt(message.PublishEvent.ClientInfo.UserID, 10, 64)
+	if err != nil {
+		return centrifuge.PublishReply{}, fmt.Errorf("error converting UserID to int64: %w", err)
+	}
+
+	createdComment, err := m.commentService.Create(context.TODO(), commentservice.CreateCommentDTO{
+		Body:   input.Body,
+		PostID: input.PostID,
+		UserID: userID,
+	})
 	if err != nil {
 		return centrifuge.PublishReply{}, err
 	}
@@ -52,13 +64,23 @@ func (m *Manager) handleCreateComment(message clientMessage) (centrifuge.Publish
 }
 
 func (m *Manager) handleDeleteComment(message clientMessage) (centrifuge.PublishReply, error) {
-	var dto commentservice.DeleteCommentDTO
-	err := json.Unmarshal(message.Event.Payload, &dto)
+	var input struct {
+		CommentID string `json:"comment_id"`
+	}
+	err := json.Unmarshal(message.Event.Payload, &input)
 	if err != nil {
 		return centrifuge.PublishReply{}, err
 	}
 
-	err = m.commentService.Delete(context.TODO(), dto)
+	userID, err := strconv.ParseInt(message.PublishEvent.ClientInfo.UserID, 10, 64)
+	if err != nil {
+		return centrifuge.PublishReply{}, fmt.Errorf("error converting UserID to int64: %w", err)
+	}
+
+	err = m.commentService.Delete(context.TODO(), commentservice.DeleteCommentDTO{
+		CommentID: input.CommentID,
+		UserID:    userID,
+	})
 	if err != nil {
 		return centrifuge.PublishReply{}, err
 	}
@@ -84,13 +106,25 @@ func (m *Manager) handleDeleteComment(message clientMessage) (centrifuge.Publish
 }
 
 func (m *Manager) handleUpdateComment(message clientMessage) (centrifuge.PublishReply, error) {
-	var dto commentservice.UpdateCommentDTO
-	err := json.Unmarshal(message.Event.Payload, &dto)
+	var input struct {
+		CommentID string `json:"comment_id"`
+		Body      string `json:"body"`
+	}
+	err := json.Unmarshal(message.Event.Payload, &input)
 	if err != nil {
 		return centrifuge.PublishReply{}, err
 	}
 
-	updatedComment, err := m.commentService.Update(context.TODO(), dto)
+	userID, err := strconv.ParseInt(message.PublishEvent.ClientInfo.UserID, 10, 64)
+	if err != nil {
+		return centrifuge.PublishReply{}, fmt.Errorf("error converting UserID to int64: %w", err)
+	}
+
+	updatedComment, err := m.commentService.Update(context.TODO(), commentservice.UpdateCommentDTO{
+		CommentID: input.CommentID,
+		Body:      input.Body,
+		UserID:    userID,
+	})
 	if err != nil {
 		return centrifuge.PublishReply{}, err
 	}
@@ -101,7 +135,7 @@ func (m *Manager) handleUpdateComment(message clientMessage) (centrifuge.Publish
 	}
 
 	event := Event{
-		Type:      EventUpdateComment,
+		Type:      EventEditComment,
 		Payload:   payload,
 		Timestamp: time.Now().Unix(),
 	}

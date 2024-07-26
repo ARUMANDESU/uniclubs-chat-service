@@ -6,6 +6,7 @@ require (
 	github.com/ARUMANDESU/uniclubs-protos v0.9.1
 	github.com/centrifugal/centrifuge v0.32.2
 	github.com/go-ozzo/ozzo-validation/v4 v4.3.0
+	github.com/golang-jwt/jwt/v5 v5.2.1
 	github.com/grpc-ecosystem/go-grpc-middleware/v2 v2.1.0
 	github.com/ilyakaznacheev/cleanenv v1.5.0
 	github.com/joho/godotenv v1.5.1
@@ -18,6 +19,7 @@ require (
 require (
 	github.com/BurntSushi/toml v1.3.2 // indirect
 	github.com/FZambia/eagle v0.1.0 // indirect
+	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/centrifugal/protocol v0.12.1 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
@@ -34,6 +36,7 @@ require (
 	github.com/prometheus/common v0.48.0 // indirect
 	github.com/prometheus/procfs v0.12.0 // indirect
 	github.com/redis/rueidis v1.0.35 // indirect
+	github.com/rogpeppe/go-internal v1.12.0 // indirect
 	github.com/segmentio/asm v1.2.0 // indirect
 	github.com/segmentio/encoding v0.4.0 // indirect
 	github.com/stretchr/objx v0.5.2 // indirect

@@ -7,10 +7,13 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"os"
+	"strconv"
 	"time"
 
 	"github.com/ARUMANDESU/uniclubs-comments-service/internal/domain"
 	"github.com/ARUMANDESU/uniclubs-comments-service/internal/services/commentservice"
+	"github.com/ARUMANDESU/uniclubs-comments-service/pkg/jwt"
 	"github.com/ARUMANDESU/uniclubs-comments-service/pkg/logger"
 	"github.com/centrifugal/centrifuge"
 )
@@ -60,12 +63,29 @@ func NewManager(log *slog.Logger, commentService CommentService) (*Manager, erro
 // setupNode configures Centrifuge Node to handle all necessary events.
 func (m *Manager) setupNode() error {
 	m.node.OnConnecting(func(ctx context.Context, e centrifuge.ConnectEvent) (centrifuge.ConnectReply, error) {
-		cred, _ := centrifuge.GetCredentials(ctx)
+
+		userID, expiresAt, err := jwt.GetUserID(e.Token, os.Getenv("JWT_SECRET"))
+		if err != nil {
+			switch {
+			case errors.Is(err, domain.ErrTokenIsNotValid),
+				errors.Is(err, domain.ErrInvalidTokenClaims),
+				errors.Is(err, domain.ErrUserIDClaimNotFound),
+				errors.Is(err, domain.ErrUnexpectedSigningMethod):
+				return centrifuge.ConnectReply{}, centrifuge.ErrorUnauthorized
+			case errors.Is(err, domain.ErrTokenIsExpired):
+				return centrifuge.ConnectReply{}, centrifuge.ErrorTokenExpired
+			default:
+				return centrifuge.ConnectReply{}, centrifuge.DisconnectInvalidToken
+			}
+		}
+
 		return centrifuge.ConnectReply{
-			Data: []byte(`{}`),
-			// Subscribe to a personal server-side channel.
+			Credentials: &centrifuge.Credentials{
+				UserID:   strconv.FormatInt(userID, 10),
+				ExpireAt: expiresAt,
+			},
 			Subscriptions: map[string]centrifuge.SubscribeOptions{
-				"#" + cred.UserID: {
+				"#" + strconv.FormatInt(userID, 10): {
 					EnableRecovery: true,
 					EmitPresence:   true,
 					EmitJoinLeave:  true,
