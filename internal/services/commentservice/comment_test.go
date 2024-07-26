@@ -2,13 +2,14 @@ package commentservice
 
 import (
 	"context"
+	"testing"
+	"time"
+
 	"github.com/ARUMANDESU/uniclubs-comments-service/internal/domain"
 	"github.com/ARUMANDESU/uniclubs-comments-service/internal/services/commentservice/mocks"
 	"github.com/ARUMANDESU/uniclubs-comments-service/pkg/logger"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
-	"testing"
-	"time"
 )
 
 type Suite struct {
@@ -113,12 +114,14 @@ func TestService_Update(t *testing.T) {
 			name: "success",
 			dto: UpdateCommentDTO{
 				CommentID: "1",
+				UserID:    1,
 				Body:      "new body",
 			},
 		},
 		{
 			name: "empty comment",
 			dto: UpdateCommentDTO{
+				UserID:    1,
 				CommentID: "1",
 				Body:      "",
 			},
@@ -160,27 +163,38 @@ func TestService_Update_FailPath(t *testing.T) {
 
 	tests := []struct {
 		name          string
+		dto           UpdateCommentDTO
 		onGetComment  error
 		onUpdate      error
 		expectedError error
 	}{
 		{
 			name:          "unexpected error",
+			dto:           UpdateCommentDTO{CommentID: "1", UserID: 1, Body: "new body"},
 			onGetComment:  nil,
 			onUpdate:      assert.AnError,
 			expectedError: domain.ErrInternal,
 		},
 		{
 			name:          "comment not found",
+			dto:           UpdateCommentDTO{CommentID: "1", UserID: 1, Body: "new body"},
 			onGetComment:  domain.ErrCommentNotFound,
 			onUpdate:      nil,
 			expectedError: domain.ErrCommentNotFound,
 		},
 		{
 			name:          "invalid id",
+			dto:           UpdateCommentDTO{CommentID: "1", UserID: 1, Body: "new body"},
 			onGetComment:  domain.ErrInvalidID,
 			onUpdate:      nil,
 			expectedError: domain.ErrInvalidID,
+		},
+		{
+			name:          "unauthorized",
+			dto:           UpdateCommentDTO{CommentID: "1", UserID: 2, Body: "new body"},
+			onGetComment:  nil,
+			onUpdate:      nil,
+			expectedError: domain.ErrUnauthorized,
 		},
 	}
 
@@ -192,13 +206,13 @@ func TestService_Update_FailPath(t *testing.T) {
 
 			s.mockProvider.On("GetComment", mock.Anything, "1").Return(baseComment, tc.onGetComment)
 
-			if tc.onGetComment == nil {
+			if tc.onGetComment == nil && tc.expectedError != domain.ErrUnauthorized {
 				s.mockUpdater.On("UpdateComment", mock.Anything, mock.AnythingOfType("domain.Comment")).Return(func(ctx context.Context, comment domain.Comment) (domain.Comment, error) {
 					return comment, tc.onUpdate
 				})
 			}
 
-			_, err := s.Service.Update(context.Background(), UpdateCommentDTO{CommentID: "1"})
+			_, err := s.Service.Update(context.Background(), tc.dto)
 			assert.ErrorIs(t, err, tc.expectedError)
 		})
 	}
@@ -209,10 +223,13 @@ func TestService_Delete(t *testing.T) {
 	defer s.mockProvider.AssertExpectations(t)
 	defer s.mockDeleter.AssertExpectations(t)
 
-	s.mockProvider.On("GetComment", mock.Anything, "1").Return(domain.Comment{}, nil)
+	s.mockProvider.On("GetComment", mock.Anything, "1").Return(domain.Comment{User: domain.User{ID: 1}}, nil)
 	s.mockDeleter.On("DeleteComment", mock.Anything, "1").Return(nil)
 
-	err := s.Service.Delete(context.Background(), "1")
+	err := s.Service.Delete(context.Background(), DeleteCommentDTO{
+		UserID:    1,
+		CommentID: "1",
+	})
 	assert.Nil(t, err)
 }
 
@@ -220,27 +237,38 @@ func TestService_Delete_FailPath(t *testing.T) {
 
 	tests := []struct {
 		name          string
+		dto           DeleteCommentDTO
 		onGetComment  error
 		onDelete      error
 		expectedError error
 	}{
 		{
 			name:          "unexpected error",
+			dto:           DeleteCommentDTO{UserID: 0, CommentID: "1"},
 			onGetComment:  nil,
 			onDelete:      assert.AnError,
 			expectedError: domain.ErrInternal,
 		},
 		{
 			name:          "comment not found",
+			dto:           DeleteCommentDTO{UserID: 0, CommentID: "1"},
 			onGetComment:  domain.ErrCommentNotFound,
 			onDelete:      nil,
 			expectedError: domain.ErrCommentNotFound,
 		},
 		{
 			name:          "invalid id",
+			dto:           DeleteCommentDTO{UserID: 0, CommentID: "1"},
 			onGetComment:  domain.ErrInvalidID,
 			onDelete:      nil,
 			expectedError: domain.ErrInvalidID,
+		},
+		{
+			name:          "unauthorized",
+			dto:           DeleteCommentDTO{UserID: 1, CommentID: "1"},
+			onGetComment:  nil,
+			onDelete:      nil,
+			expectedError: domain.ErrUnauthorized,
 		},
 	}
 
@@ -252,11 +280,11 @@ func TestService_Delete_FailPath(t *testing.T) {
 
 			s.mockProvider.On("GetComment", mock.Anything, "1").Return(domain.Comment{}, tc.onGetComment)
 
-			if tc.onGetComment == nil {
+			if tc.onGetComment == nil && tc.expectedError != domain.ErrUnauthorized {
 				s.mockDeleter.On("DeleteComment", mock.Anything, "1").Return(tc.onDelete)
 			}
 
-			err := s.Service.Delete(context.Background(), "1")
+			err := s.Service.Delete(context.Background(), tc.dto)
 			assert.ErrorIs(t, err, tc.expectedError)
 		})
 	}

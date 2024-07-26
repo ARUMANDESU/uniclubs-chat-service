@@ -7,6 +7,12 @@ type CreateCommentDTO struct {
 }
 
 type UpdateCommentDTO struct {
+	UserID    int64  `json:"user_id"`
 	CommentID string `json:"comment_id"`
 	Body      string `json:"body"`
+}
+
+type DeleteCommentDTO struct {
+	UserID    int64  `json:"user_id"`
+	CommentID string `json:"comment_id"`
 }

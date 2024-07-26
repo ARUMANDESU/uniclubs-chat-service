@@ -3,10 +3,11 @@ package commentservice
 import (
 	"context"
 	"errors"
-	"github.com/ARUMANDESU/uniclubs-comments-service/internal/domain"
-	"github.com/ARUMANDESU/uniclubs-comments-service/pkg/logger"
 	"log/slog"
 	"time"
+
+	"github.com/ARUMANDESU/uniclubs-comments-service/internal/domain"
+	"github.com/ARUMANDESU/uniclubs-comments-service/pkg/logger"
 )
 
 type Config struct {
@@ -97,6 +98,10 @@ func (s Service) Update(ctx context.Context, dto UpdateCommentDTO) (domain.Comme
 		return domain.Comment{}, handleErr(log, op, err)
 	}
 
+	if comment.User.ID != dto.UserID {
+		return domain.Comment{}, domain.ErrUnauthorized
+	}
+
 	comment.Body = dto.Body
 	comment.UpdatedAt = time.Now()
 
@@ -108,16 +113,20 @@ func (s Service) Update(ctx context.Context, dto UpdateCommentDTO) (domain.Comme
 	return updatedComment, nil
 }
 
-func (s Service) Delete(ctx context.Context, commentID string) error {
+func (s Service) Delete(ctx context.Context, dto DeleteCommentDTO) error {
 	const op = "service.comment.delete"
 	log := s.log.With(slog.String("op", op))
 
-	_, err := s.provider.GetComment(ctx, commentID)
+	comment, err := s.provider.GetComment(ctx, dto.CommentID)
 	if err != nil {
 		return handleErr(log, op, err)
 	}
 
-	err = s.deleter.DeleteComment(ctx, commentID)
+	if comment.User.ID != dto.UserID {
+		return domain.ErrUnauthorized
+	}
+
+	err = s.deleter.DeleteComment(ctx, dto.CommentID)
 	if err != nil {
 		return handleErr(log, op, err)
 	}

@@ -5,13 +5,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
+	"net/http"
+	"time"
+
 	"github.com/ARUMANDESU/uniclubs-comments-service/internal/domain"
 	"github.com/ARUMANDESU/uniclubs-comments-service/internal/services/commentservice"
 	"github.com/ARUMANDESU/uniclubs-comments-service/pkg/logger"
 	"github.com/centrifugal/centrifuge"
-	"log/slog"
-	"net/http"
-	"time"
 )
 
 var (
@@ -29,7 +30,7 @@ type Manager struct {
 type CommentService interface {
 	Create(ctx context.Context, comment commentservice.CreateCommentDTO) (domain.Comment, error)
 	Update(ctx context.Context, dto commentservice.UpdateCommentDTO) (domain.Comment, error)
-	Delete(ctx context.Context, commentID string) error
+	Delete(ctx context.Context, dto commentservice.DeleteCommentDTO) error
 }
 
 func NewManager(log *slog.Logger, commentService CommentService) (*Manager, error) {
