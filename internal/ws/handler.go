@@ -27,7 +27,10 @@ func (m *Manager) handleCreateComment(message clientMessage) (centrifuge.Publish
 		return centrifuge.PublishReply{}, fmt.Errorf("error converting UserID to int64: %w", err)
 	}
 
-	createdComment, err := m.commentService.Create(context.TODO(), commentservice.CreateCommentDTO{
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	createdComment, err := m.commentService.Create(ctx, commentservice.CreateCommentDTO{
 		Body:   input.Body,
 		PostID: input.PostID,
 		UserID: userID,

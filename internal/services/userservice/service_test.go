@@ -3,26 +3,27 @@ package userservice
 import (
 	"context"
 	"errors"
+	"testing"
+
 	"github.com/ARUMANDESU/uniclubs-comments-service/internal/domain"
 	"github.com/ARUMANDESU/uniclubs-comments-service/internal/services/userservice/mocks"
 	"github.com/ARUMANDESU/uniclubs-comments-service/pkg/logger"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
-	"testing"
 )
 
 type Suite struct {
-	Service               Service
-	mockPrimaryProvider   *mocks.UserProvider
-	mockSecondaryProvider *mocks.UserProvider
+	Service      Service
+	dbProvider   *mocks.UserProvider
+	gRPCProvider *mocks.UserGRPCProvider
 }
 
 func NewSuite(t *testing.T) *Suite {
 	s := &Suite{
-		mockPrimaryProvider:   mocks.NewUserProvider(t),
-		mockSecondaryProvider: mocks.NewUserProvider(t),
+		dbProvider:   mocks.NewUserProvider(t),
+		gRPCProvider: mocks.NewUserGRPCProvider(t),
 	}
-	s.Service = New(logger.Plug(), s.mockPrimaryProvider, s.mockSecondaryProvider)
+	s.Service = New(logger.Plug(), s.dbProvider, s.gRPCProvider)
 	return s
 }
 
@@ -75,15 +76,55 @@ func TestService_GetUser(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			s := NewSuite(t)
 
-			defer s.mockPrimaryProvider.AssertExpectations(t)
-			s.mockPrimaryProvider.On("GetUserByID", mock.Anything, tt.userId).Return(domain.User{}, tt.primaryProviderError)
+			defer s.dbProvider.AssertExpectations(t)
+			s.dbProvider.On("GetUserByID", mock.Anything, tt.userId).Return(domain.User{}, tt.primaryProviderError)
 
 			if tt.primaryProviderError != nil {
-				defer s.mockSecondaryProvider.AssertExpectations(t)
-				s.mockSecondaryProvider.On("GetUserByID", mock.Anything, tt.userId).Return(domain.User{}, tt.secondaryProviderError)
+				defer s.gRPCProvider.AssertExpectations(t)
+				s.gRPCProvider.On("GetUserByID", mock.Anything, tt.userId).Return(domain.User{}, tt.secondaryProviderError)
 			}
 
 			_, err := s.Service.GetUser(context.Background(), tt.userId)
+			assert.ErrorIs(t, err, tt.expectedError)
+		})
+	}
+}
+
+func TestService_Update(t *testing.T) {
+	tests := []struct {
+		name          string
+		user          domain.User
+		primaryError  error
+		expectedError error
+	}{
+		{
+			name:          "success",
+			user:          domain.User{ID: 1},
+			primaryError:  nil,
+			expectedError: nil,
+		},
+		{
+			name:          "fail: not found",
+			user:          domain.User{ID: 1},
+			primaryError:  domain.ErrUserNotFound,
+			expectedError: domain.ErrUserNotFound,
+		},
+		{
+			name:          "unexpected error",
+			user:          domain.User{ID: 1},
+			primaryError:  errors.New("unexpected error"),
+			expectedError: domain.ErrInternal,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := NewSuite(t)
+
+			s.dbProvider.On("UpdateUser", mock.Anything, tt.user).Return(tt.primaryError)
+			defer s.dbProvider.AssertExpectations(t)
+
+			err := s.Service.Update(context.Background(), tt.user)
 			assert.ErrorIs(t, err, tt.expectedError)
 		})
 	}

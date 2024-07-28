@@ -3,6 +3,9 @@ package userclient
 import (
 	"context"
 	"fmt"
+	"log/slog"
+	"time"
+
 	"github.com/ARUMANDESU/uniclubs-comments-service/internal/domain"
 	"github.com/ARUMANDESU/uniclubs-comments-service/pkg/logger"
 	userv1 "github.com/ARUMANDESU/uniclubs-protos/gen/go/user"
@@ -12,8 +15,6 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/status"
-	"log/slog"
-	"time"
 )
 
 type Client struct {
@@ -57,7 +58,7 @@ func New(
 }
 
 func (c *Client) GetUserByID(ctx context.Context, id int64) (domain.User, error) {
-	const op = "client.user.getUserByID"
+	const op = "client.user.get_user_by_id"
 	log := c.log.With(slog.String("op", op))
 
 	user, err := c.UserClient.GetUser(ctx, &userv1.GetUserRequest{UserId: id})

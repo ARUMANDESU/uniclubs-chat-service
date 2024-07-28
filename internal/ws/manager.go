@@ -30,6 +30,7 @@ type Manager struct {
 	commentService CommentService
 }
 
+//go:generate mockery --name CommentService
 type CommentService interface {
 	Create(ctx context.Context, comment commentservice.CreateCommentDTO) (domain.Comment, error)
 	Update(ctx context.Context, dto commentservice.UpdateCommentDTO) (domain.Comment, error)

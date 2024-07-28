@@ -3,9 +3,10 @@ package config
 import (
 	"flag"
 	"fmt"
-	"github.com/ilyakaznacheev/cleanenv"
 	"os"
 	"time"
+
+	"github.com/ilyakaznacheev/cleanenv"
 )
 
 type Config struct {
@@ -16,7 +17,7 @@ type Config struct {
 	MongoDB         MongoDB       `yaml:"mongodb"`
 	Clients         ClientsConfig `yaml:"clients"`
 	GRPC            GRPC          `yaml:"grpc"`
-	//Rabbitmq Rabbitmq `yaml:"rabbitmq"`
+	Rabbitmq        Rabbitmq      `yaml:"rabbitmq"`
 }
 
 type HTTP struct {

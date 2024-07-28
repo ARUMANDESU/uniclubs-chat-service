@@ -2,19 +2,22 @@ package app
 
 import (
 	"context"
+	"log/slog"
+	"sync"
+
+	amqpapp "github.com/ARUMANDESU/uniclubs-comments-service/internal/app/amqp"
 	"github.com/ARUMANDESU/uniclubs-comments-service/internal/app/grpcapp"
 	"github.com/ARUMANDESU/uniclubs-comments-service/internal/app/httpapp"
 	userclient "github.com/ARUMANDESU/uniclubs-comments-service/internal/client/user"
 	"github.com/ARUMANDESU/uniclubs-comments-service/internal/config"
 	"github.com/ARUMANDESU/uniclubs-comments-service/internal/grpc/commentgrpc"
 	"github.com/ARUMANDESU/uniclubs-comments-service/internal/handlers"
+	"github.com/ARUMANDESU/uniclubs-comments-service/internal/rabbitmq"
 	"github.com/ARUMANDESU/uniclubs-comments-service/internal/services/commentservice"
 	"github.com/ARUMANDESU/uniclubs-comments-service/internal/services/userservice"
 	"github.com/ARUMANDESU/uniclubs-comments-service/internal/storage/mongodb"
 	"github.com/ARUMANDESU/uniclubs-comments-service/internal/ws"
 	"github.com/ARUMANDESU/uniclubs-comments-service/pkg/logger"
-	"log/slog"
-	"sync"
 )
 
 type App struct {
@@ -60,6 +63,12 @@ func New(ctx context.Context, cfg config.Config, log *slog.Logger) *App {
 		panic(err)
 	}
 
+	rmq, err := rabbitmq.New(cfg.Rabbitmq, log)
+	if err != nil {
+		log.Error("failed to connect to rabbitmq", logger.Err(err))
+		panic(err)
+	}
+
 	userService := userservice.New(log, &mongoStorage, userClient)
 
 	commentService := commentservice.New(commentservice.Config{
@@ -90,6 +99,10 @@ func New(ctx context.Context, cfg config.Config, log *slog.Logger) *App {
 	grpcApp := grpcapp.New(log, cfg.GRPC.Port, &grpcServer)
 	starters = append(starters, grpcApp)
 	stoppers = append(stoppers, grpcApp)
+
+	rabbitmqApp := amqpapp.New(log, &userService, rmq)
+	starters = append(starters, rabbitmqApp)
+	stoppers = append(stoppers, rabbitmqApp)
 
 	return &App{
 		log:      log,

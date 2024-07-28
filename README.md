@@ -126,6 +126,8 @@ This is a simple comments service for [AITU UCMS][aitu-ucms-url] project. It is 
    USER_SERVICE_ADDRESS=<host>:<port>
    USER_SERVICE_TIMEOUT=10s
    USER_SERVICE_RETRIES_COUNT=2
+
+   JWT_SECRET=
    ```
 4. Run the service
    ```sh

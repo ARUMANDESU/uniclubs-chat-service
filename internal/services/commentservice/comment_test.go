@@ -338,28 +338,37 @@ func TestService_GetByID_FailPath(t *testing.T) {
 	}
 }
 
-/*func TestService_GetByPostID(t *testing.T) {
+func TestService_ListByPostID(t *testing.T) {
 	s := newSuite(t)
 	defer s.mockProvider.AssertExpectations(t)
 
-	s.mockProvider.On("GetPostComments", mock.Anything, "1").Return([]domain.Comment{}, nil)
-
-	comments, err := s.Service.ListByPostID(context.Background(), "1", domain.Filter{})
+	filter, err := domain.NewFilter(domain.WithPage(1), domain.WithPageSize(10))
 	assert.Nil(t, err)
-	assert.NotNil(t, comments)
+
+	expectedComments := []domain.Comment{
+		{ID: "1", Body: "Comment 1"},
+		{ID: "2", Body: "Comment 2"},
+	}
+	expectedMetadata := domain.PaginationMetadata{TotalRecords: 2, PageSize: 10, CurrentPage: 1, FirstPage: 1, LastPage: 1}
+
+	s.mockProvider.On("ListPostComments", mock.Anything, "1", mock.Anything).Return(expectedComments, expectedMetadata, nil)
+
+	comments, metadata, err := s.Service.ListByPostID(context.Background(), "1", *filter)
+	assert.Nil(t, err)
+	assert.Equal(t, expectedComments, comments)
+	assert.Equal(t, expectedMetadata, metadata)
 }
 
-func TestService_GetByPostID_FailPath(t *testing.T) {
-
+func TestService_ListByPostID_FailPath(t *testing.T) {
 	tests := []struct {
-		name              string
-		onGetPostComments error
-		expectedError     error
+		name               string
+		onListPostComments error
+		expectedError      error
 	}{
 		{
-			name:              "unexpected error",
-			onGetPostComments: assert.AnError,
-			expectedError:     domain.ErrInternal,
+			name:               "unexpected error",
+			onListPostComments: assert.AnError,
+			expectedError:      domain.ErrInternal,
 		},
 	}
 
@@ -368,11 +377,10 @@ func TestService_GetByPostID_FailPath(t *testing.T) {
 			s := newSuite(t)
 			defer s.mockProvider.AssertExpectations(t)
 
-			s.mockProvider.On("GetPostComments", mock.Anything, "1").Return([]domain.Comment{}, tc.onGetPostComments)
+			s.mockProvider.On("ListPostComments", mock.Anything, "1", domain.Filter{}).Return(nil, domain.PaginationMetadata{}, tc.onListPostComments)
 
-			_, err := s.Service.ListByPostID(context.Background(), "1", domain.Filter{})
+			_, _, err := s.Service.ListByPostID(context.Background(), "1", domain.Filter{})
 			assert.ErrorIs(t, err, tc.expectedError)
 		})
 	}
 }
-*/
